@@ -14,6 +14,11 @@ from ipywidgets import interact, interactive, fixed
 import ipywidgets as widgets
 from IPython.display import display
 
+#for backwards compatibility reasons, odl notebooks might refer to eg. FaradayMap2, so let's link them here:
+FaradayMap2=FaradayMap
+PolarimetryMap2=PolarimetryMap
+NeLMap2=NeLMap
+
 class DataMap:
     def __init__(self, flip_lr, rot_angle, multiply_by, scale):
         if flip_lr is True:
@@ -81,7 +86,7 @@ class DataMap:
         except:
             print('No Transform found!')
     
-class NeLMap2(DataMap):
+class NeLMap(DataMap):
     def __init__(self, filename, scale, multiply_by=1, flip_lr=False, rot_angle=None):
         self.fn=filename[:8]
         d=np.loadtxt(open(filename,"r"),delimiter=",")
@@ -115,7 +120,7 @@ class Interferogram(DataMap):
         d=self.data_c
         return ax.imshow(d, interpolation='none', extent=self.extent, aspect=1)
 
-class PolarimetryMap2(DataMap):
+class PolarimetryMap(DataMap):
     def __init__(self, R0fn, R1fn, B0fn, B1fn, S0fn, S1fn, rot_angle=None):
         self.fn=R0fn[:8]
         self.rot_angle=rot_angle
@@ -244,8 +249,7 @@ class InterferogramOntoAlpha(DataMap):
         ax.imshow(self.pm.data, cmap='RdBu', clim=clim)
         ax.imshow(self.data, cmap='gray', alpha=transparency)
 
-
-class FaradayMap2(DataMap):
+class FaradayMap(DataMap):
     def __init__(self, polmap, I0, ne, flip_ne=False):
         self.fn=polmap.fn[:8]
         I0=plt.imread(I0)
@@ -296,65 +300,6 @@ class FaradayMap2(DataMap):
         self.I1T=ird.transform_img_dict(self.I1zc, self.transform)
         self.data=5.99e18*self.pm.data/self.I1T
         
-class NeLMap:
-    def __init__(self, filename, scale, multiply_by=1, flip_lr=False, rot_angle=None):
-        d=np.loadtxt(open(filename,"r"),delimiter=",")
-        d=d-np.nan_to_num(d).min()
-        d=np.nan_to_num(d)
-        if flip_lr is True:
-            d=np.fliplr(d)
-        if rot_angle is not None:
-            d=rotate(d, rot_angle)
-        self.neL=d*multiply_by
-        self.scale=scale
-    def plot_neL(self, clim=[0,2], ax=None, transpose=False):
-        if ax is None:
-            fig, ax=plt.subplots(figsize=(12,8))
-        d=self.neL/1e18
-        if transpose is True:
-            d=np.transpose(d)
-        ax.imshow(self.neL/1e18)#, cmap='afmhot', interpolation='none', clim=clim)
-    def set_origin(self, origin, x_range=11.5, y_range=8.5):
-        self.origin=origin
-        y0=y_range*self.scale
-        x0=x_range*self.scale
-        ymin=origin[0]-y_range*self.scale
-        ymax=origin[0]+y_range*self.scale
-        xmin=origin[1]-x_range*self.scale
-        xmax=origin[1]+x_range*self.scale
-        self.origin_crop=[y_range*self.scale,x_range*self.scale]
-        self.neL_crop=self.neL[ymin:ymax, xmin:xmax]
-        self.extent=[-x_range,x_range,-y_range,y_range]
-    def plot_neL_mm(self,clim=[0,2], ax=None, transpose=False, cmap=cmaps.cmaps['inferno']):
-        if ax is None:
-            fig, ax=plt.subplots(figsize=(12,8))
-        d=self.neL_crop/1e18
-        ex=self.extent
-        if transpose is True:
-            d=np.transpose(d)
-            ex=ex[2:4]+ex[0:2]
-        return ax.imshow(d, cmap=cmap, interpolation='none', clim=clim, extent=ex, aspect=1)
-    def create_lineout(self, start=(0,0), end=(0,0), lineout_width=20):
-        '''
-        start and end are in mm on the grid defined by the origin you just set
-        '''
-        #find coordinates in pixels
-        start_px=mm_to_px(start)
-        end_px=mm_to_px(stop)
-        #use scikit image to do a nice lineout on the cropped array
-        self.lo=profile_line(self.neL_crop, start_px,end_px,linewidth=lineout_width)
-        #set up a mm scale centred on 0
-        px_range=self.lo.size/2
-        self.mm=np.linspace(px_range, -px_range, 2*px_range)/self.scale #flip range to match images
-    def plot_lineout(self, ax=None, label=''):
-        if ax is None:
-            fig, ax=plt.subplots(figsize=(12,8))
-        ax.plot(self.mm, self.lo/1e18, label=label, lw=4)        
-    def mm_to_px(mm):
-        scale=self.scale
-        px_origin=self.origin_crop
-        return (int(mm[0]*scale+px_origin[0]),int(mm[1]*scale+px_origin[1]))
-            
 class OpticalFrames:
     def __init__(self, start, IF):
         self.load_images()
@@ -466,68 +411,4 @@ class OpticalFrames:
             buf.shape=(h,w,3)
             hot_im.append(buf)
         ig.writeGif(filename+'.gif',hot_im, duration=0.2)
-        
-
-
-class PolarimetryMap:
-    def __init__(self, B0fn, B1fn, S0fn, S1fn):
-        self.B0=plt.imread(B0fn)
-        self.B1=plt.imread(B1fn)
-        self.S0=plt.imread(S0fn)
-        self.S1=plt.imread(S1fn)
-    def register(self):
-        self.BT, self.ST,self.scale, self.angle, (self.t0, self.t1)=ir.transform_like(self.B0,self.B1, self.S1)
-    def convert_to_alpha(self, beta=3.0):
-        self.N0=self.S0/self.B0
-        self.N1=self.ST/self.BT
-        diff=self.N0-self.N1
-        self.diff=np.nan_to_num(diff)
-        beta=beta*np.pi/180
-        self.alpha=(180/np.pi)*0.5*np.arcsin(self.diff*np.tan(beta)/2.0)
-    def set_origin(self, origin, x_range=11.5, y_range=8.5):
-        self.origin=origin
-        ymin=origin[0]-y_range*self.scale
-        ymax=origin[0]+y_range*self.scale
-        xmin=origin[1]-x_range*self.scale
-        xmax=origin[1]+x_range*self.scale
-        self.alpha_crop=self.alpha[ymin:ymax, xmin:xmax]
-        self.extent=[-x_range,x_range,-y_range,y_range]
-    def plot_alpha(self,clim=[-2,2], ax=None, transpose=False, cmap=plt.cm.seismic):
-        if ax is None:
-            fig, ax=plt.subplots(figsize=(12,8))
-        d=self.alpha
-        if transpose is True:
-            d=np.transpose(d)
-        return ax.imshow(d, cmap=cmap, interpolation='none', clim=clim, aspect=1)
-    def plot_alpha_mm(self,clim=[-2,2], ax=None, transpose=False, cmap=plt.cm.seismic):
-        if ax is None:
-            fig, ax=plt.subplots(figsize=(12,8))
-        d=self.alpha_crop
-        ex=self.extent
-        if transpose is True:
-            d=np.transpose(d)
-            ex=ex[2:4]+ex[0:2]
-        return ax.imshow(d, cmap=cmap, interpolation='none', clim=clim, extent=ex, aspect=1)
-    
-class FaradayMap:
-    def __init__(self, polmap, I0, ne):
-        I0=plt.imread(I0)
-        self.I0s=np.sum(I0,2)
-        I1=np.loadtxt(ne, delimiter=',')
-        self.I1=np.nan_to_num(I1)
-        self.pm=polmap
-    def scale_and_crop(self):
-        B0=self.pm.B0
-        scale=B0.shape[0]/self.I0s.shape[0]
-        I0z=zoom(self.I0s, scale)
-        crop=(I0z.shape[1]-B0.shape[1])/2
-        I0zc=I0z[:,crop:-crop]
-        self.I0zcn=np.fliplr(I0zc/I0zc.max())
-        
-        I1z=zoom(self.I1, scale)
-        I1zc=I1z[:,crop:-crop]
-        self.I1zc=np.flipud(I1z[:,crop:-crop])
-    def register(self):
-        self.I0T, self.I1T, self.scale, self.angle, (self.t0, self.t1)=ir.transform_like(self.pm.B0,self.I0zcn, self.I1zc)
-        self.B=5.99e18*self.pm.alpha/self.I1T
         
