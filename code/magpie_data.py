@@ -44,7 +44,7 @@ class DataMap:
             fig, ax=plt.subplots(figsize=(12,8))
         d=self.data_c*multiply_by
         return ax.imshow(d, cmap=self.cmap, interpolation='none', clim=clim, extent=self.extent, aspect=1)
-    def create_lineout(self, start=(0,0), end=(0,0), lineout_width=20, verbose=False):
+    def create_lineout(self, start=(0,0), end=(0,0), lineout_width_mm=1, verbose=False):
         '''
         start and end are in mm on the grid defined by the origin you just set
         '''
@@ -54,7 +54,7 @@ class DataMap:
         if verbose is True:
             print(start_px,end_px)
         #use scikit image to do a nice lineout on the cropped array
-        self.lo=profile_line(self.data_c, start_px,end_px,linewidth=lineout_width)
+        self.lo=profile_line(self.data_c, start_px,end_px,linewidth=lineout_width_mm*self.scale)
         #set up a mm scale centred on 0
         px_range=self.lo.size/2
         self.mm=np.linspace(-px_range, px_range, 2*px_range)/self.scale #flip range to match images
@@ -67,11 +67,78 @@ class DataMap:
         px_origin=self.origin_crop
         return (int(-mm[0]*scale+px_origin[0]),int(mm[1]*scale+px_origin[1]))
     
+    #Functions for transforms - not every child class uses these, but they are reused often enough
+    def register(self, constraints=None, transform=None):
+        if transform is None:
+            t=ird.similarity(self.R0, self.R1, numiter=3, constraints=constraints)
+            transform = { your_key: t[your_key] for your_key in ['angle','scale','tvec'] }
+        self.transform=transform
+    def nudge_transform(self, xlim=100, ylim=100):        
+        def plot_transform(scale, angle, tx, ty, limits):
+            imT=ird.imreg.transform_img(self.R1, scale=scale, angle=angle, tvec=(ty,tx))
+            diff=self.R0-imT
+            fig, ax=plt.subplots(figsize=(10,8))
+            ax.imshow(diff, cmap='bwr', clim=[-limits,limits])
+
+        ty=widgets.FloatSlider(min=self.transform['tvec'][0]-ylim,
+                               max=self.transform['tvec'][0]+ylim,
+                               step=1,
+                               description='Translate in y:',
+                               value=self.transform['tvec'][0],
+                                continuous_update=False)
+
+        tx=widgets.FloatSlider(min=self.transform['tvec'][1]-xlim,
+                       max=self.transform['tvec'][1]+xlim,
+                       step=1,
+                       description='Translate in x:',
+                       value=self.transform['tvec'][1],
+                               continuous_update=False)
+        scale=widgets.FloatSlider(min=0,
+                               max=2,
+                               step=0.05,
+                               description='Scale:',
+                               value=self.transform['scale'],
+                                  continuous_update=False)
+        angle=widgets.FloatSlider(min=-180,
+                       max=180,
+                       step=0.5,
+                       description='Angle (radians):',
+                       value=self.transform['angle'],
+                                  continuous_update=False)
+
+        limits=widgets.FloatSlider(min=0,
+                                  max=1,
+                                  step=0.01,
+                                  value=0.1,
+                                   description='Colourbar limits:',
+                                   continuous_update=False)
+
+        self.w=interactive(plot_transform,
+                      scale=scale, 
+                      angle=angle, 
+                      tx=tx,
+                      ty=ty,
+                      limits=limits
+                      )
+
+        display(self.w)
+
+    def confirm_nudge(self):
+        wargs=self.w.kwargs
+        self.transform['scale']=wargs['scale']
+        self.transform['angle']=wargs['angle']
+        self.transform['tvec']=(wargs['ty'],wargs['tx'])
+    def transform_images(self):
+        self.RT=ird.transform_img_dict(self.R1, self.transform)
+        self.DT=ird.transform_img_dict(self.D1, self.transform)
     def save_transform(self, fn):
         try:
             pickle.dump(self.transform, open(fn, 'wb'))
         except:
             print('No Transform found!')
+    def load_transform(self):
+        self.transform=pickle.load(open(self.transform_fn, "rb" ))
+
     
 class NeLMap(DataMap):
     def __init__(self, filename, scale, multiply_by=1, flip_lr=False, rot_angle=None):
@@ -110,6 +177,7 @@ class Interferogram(DataMap):
 class PolarimetryMap(DataMap):
     def __init__(self, R0fn, R1fn, B0fn, B1fn, S0fn, S1fn, rot_angle=None):
         self.fn=R0fn[:8]
+        self.transform_fn=self.fn[:8]+' faraday registration.p'
         self.rot_angle=rot_angle
         self.R0=plt.imread(R0fn)
         self.R1=np.fliplr(plt.imread(R1fn))
@@ -128,84 +196,19 @@ class PolarimetryMap(DataMap):
         R0s=self.R0.sum()
         R1s=self.R1.sum()
         self.R0=self.R0*R1s/R0s
+        self.D0=self.S0/self.B0
+        self.D1=self.S1/self.B1
         self.cmap='seismic'
-    def register(self, constraints=None, transform=None):
-        if transform is None:
-            t=ird.similarity(self.R0, self.R1, numiter=3, constraints=constraints)
-            transform = { your_key: t[your_key] for your_key in ['angle','scale','tvec'] }
-        self.transform=transform
-    def nudge_transform(self):        
-        def plot_transform(scale, angle, tx, ty, limits):
-            imT=ird.imreg.transform_img(self.R1, scale=scale, angle=angle, tvec=(ty,tx))
-            diff=self.R0-imT
-            fig, ax=plt.subplots(figsize=(10,8))
-            ax.imshow(diff, cmap='bwr', clim=[-limits,limits])
-
-        ty=widgets.FloatSlider(min=self.transform['tvec'][0]-50,
-                               max=self.transform['tvec'][0]+50,
-                               step=1,
-                               description='Translate in y:',
-                               value=self.transform['tvec'][0],
-                                continuous_update=False)
-
-        tx=widgets.FloatSlider(min=self.transform['tvec'][1]-50,
-                       max=self.transform['tvec'][1]+50,
-                       step=1,
-                       description='Translate in x:',
-                       value=self.transform['tvec'][1],
-                               continuous_update=False)
-        scale=widgets.FloatSlider(min=0,
-                               max=2,
-                               step=0.05,
-                               description='Scale:',
-                               value=self.transform['scale'],
-                                  continuous_update=False)
-        angle=widgets.FloatSlider(min=-180,
-                       max=180,
-                       step=1,
-                       description='Angle (radians):',
-                       value=self.transform['angle'],
-                                  continuous_update=False)
-
-        limits=widgets.FloatSlider(min=0,
-                                  max=1,
-                                  step=0.01,
-                                  value=0.1,
-                                   description='Colourbar limits:',
-                                   continuous_update=False)
-
-        self.w=interactive(plot_transform,
-                      scale=scale, 
-                      angle=angle, 
-                      tx=tx,
-                      ty=ty,
-                      limits=limits
-                      )
-
-        display(self.w)
-    def confirm_nudge(self):
-        wargs=self.w.kwargs
-        self.transform['scale']=wargs['scale']
-        self.transform['angle']=wargs['angle']
-        self.transform['tvec']=(wargs['ty'],wargs['tx'])
-    def transform_images(self):
-        self.RT=ird.transform_img_dict(self.R1, self.transform)
-        self.BT=ird.transform_img_dict(self.B1, self.transform)
-        self.ST=ird.transform_img_dict(self.S1, self.transform)
     def convert_to_alpha(self, beta=3.0):
-        self.N0=self.S0/self.B0
-        self.N1=self.ST/self.BT
-        diff=self.N0-self.N1
+        diff=self.D0-self.DT
         self.diff=np.nan_to_num(diff)
         beta=beta*np.pi/180
         self.data=-(180/np.pi)*0.5*np.arcsin(self.diff*np.tan(beta)/2.0)
-    def load_transform(self):
-        self.transform=pickle.load(open(self.fn[:8]+' faraday registration.p', "rb" ))
-
         
 class InterferogramOntoPolarimetry(DataMap):
     def __init__(self, polmap, I0, I1):
         self.fn=I0[:8]
+        self.transform_fn=self.fn[:8]+' interferometry registration.p'
         #load the registration and interferometry images
         I0=plt.imread(I0)
         I0s=np.sum(I0,2)
@@ -222,7 +225,8 @@ class InterferogramOntoPolarimetry(DataMap):
             self.I1=rotate(self.I1,self.pm.rot_angle)
         #in order to perform image registration, the two images must be the same size
         #here we work out whether to rescale based on the x or y size of the image
-        R0=self.pm.R0
+        self.R0=self.pm.R0
+        R0=self.R0
         scale_y=R0.shape[0]/self.I0s.shape[0]
         scale_x=R0.shape[1]/self.I0s.shape[1]
         if scale_y>scale_x:
@@ -239,84 +243,18 @@ class InterferogramOntoPolarimetry(DataMap):
             crop=(I0z.shape[0]-R0.shape[0])//2
             I0zc=I0z[crop:crop+R0.shape[0],:]
             I1zc=I1z[crop:crop+R0.shape[0],:]
-        self.I0zcn=I0zc*(R0.max()/I0zc.max()) #normalise
-        self.I1zc=I1zc
+        self.R1=I0zc*(R0.max()/I0zc.max()) #normalise
+        self.D1=I1zc
         self.cmap='gray'
-    def register(self, constraints=None, transform=None):
-        if transform is None:
-            t=ird.similarity(self.pm.R0, self.I0zcn, numiter=3, constraints=constraints)
-            transform = { your_key: t[your_key] for your_key in ['angle','scale','tvec'] }
-        self.transform=transform       
-    def nudge_transform(self, xlim=200, ylim=200):        
-        def plot_transform(scale, angle, tx, ty, limits):
-            imT=ird.imreg.transform_img(self.I0zcn, scale=scale, angle=angle, tvec=(ty,tx))
-            diff=self.pm.R0-imT
-            fig, ax=plt.subplots(figsize=(10,8))
-            ax.imshow(diff, cmap='bwr', clim=[-limits,limits])
-
-        ty=widgets.FloatSlider(min=self.transform['tvec'][0]-ylim,
-                               max=self.transform['tvec'][0]+ylim,
-                               step=1,
-                               description='Translate in y:',
-                               value=self.transform['tvec'][0],
-                                continuous_update=False)
-
-        tx=widgets.FloatSlider(min=self.transform['tvec'][1]-xlim,
-                       max=self.transform['tvec'][1]+xlim,
-                       step=1,
-                       description='Translate in x:',
-                       value=self.transform['tvec'][1],
-                               continuous_update=False)
-        scale=widgets.FloatSlider(min=0,
-                               max=2,
-                               step=0.05,
-                               description='Scale:',
-                               value=self.transform['scale'],
-                                  continuous_update=False)
-        angle=widgets.FloatSlider(min=-180,
-                       max=180,
-                       step=0.5,
-                       description='Angle (radians):',
-                       value=self.transform['angle'],
-                                  continuous_update=False)
-
-        limits=widgets.FloatSlider(min=0,
-                                  max=1,
-                                  step=0.01,
-                                  value=0.1,
-                                   description='Colourbar limits:',
-                                   continuous_update=False)
-
-        self.w=interactive(plot_transform,
-                      scale=scale, 
-                      angle=angle, 
-                      tx=tx,
-                      ty=ty,
-                      limits=limits
-                      )
-
-        display(self.w)
-    def confirm_nudge(self):
-        wargs=self.w.kwargs
-        self.transform['scale']=wargs['scale']
-        self.transform['angle']=wargs['angle']
-        self.transform['tvec']=(wargs['ty'],wargs['tx'])
     def transform_images(self):
-        self.I0T=ird.transform_img_dict(self.I0zcn, self.transform)
-        self.data=ird.transform_img_dict(self.I1zc, self.transform)
-        self.I1T=self.data
-    def load_transform(self):
-        self.transform=pickle.load(open(self.fn[:8]+' interferometry registration.p', "rb" ))
-
-    def plot_overlay_px(self, clim=None, ax=None, transparency=0.8):
-        if ax is None:
-            fig, ax=plt.subplots(figsize=(12,8))
-        ax.imshow(self.pm.data, cmap='RdBu', clim=clim)
-        ax.imshow(self.data, cmap='gray', alpha=transparency)
+        DataMap.transform_images(self)
+        self.data=self.DT
 
 class FaradayMap(DataMap):
     def __init__(self, polmap, I0, ne, flip_ne=False):
         self.fn=polmap.fn[:8]
+        self.transform_fn=self.fn[:8]+' interferometry registration.p'
+        
         I0=plt.imread(I0)
         self.I0s=np.sum(I0,2)
         I1=np.loadtxt(ne, delimiter=',')
@@ -332,7 +270,8 @@ class FaradayMap(DataMap):
             self.I1=rotate(self.I1,self.pm.rot_angle)
         #in order to perform image registration, the two images must be the same size
         #scale and flip to data
-        R0=self.pm.R0
+        self.R0=self.pm.R0
+        R0=self.R0
         scale_y=R0.shape[0]/self.I0s.shape[0]
         scale_x=R0.shape[1]/self.I0s.shape[1]
         
@@ -350,83 +289,14 @@ class FaradayMap(DataMap):
             crop=(I0z.shape[0]-R0.shape[0])//2
             I0zc=I0z[crop:crop+R0.shape[0],:]
             I1zc=I1z[crop:crop+R0.shape[0],:]
-        self.I0zcn=I0zc*(R0.max()/I0zc.max())
-        self.I1zc=I1zc
+        self.R1=I0zc*(R0.max()/I0zc.max())
+        self.D1=I1zc
         if flip_ne is True:
-            self.I1zc=np.flipud(self.I1zc)   
+            self.D1=np.flipud(I1zc)   
         self.cmap='seismic'
-        
-    def register(self, constraints=None, transform=None):
-        if transform is None:
-            t=ird.similarity(self.pm.R0, self.I0zcn, numiter=3, constraints=constraints)
-            transform = { your_key: t[your_key] for your_key in ['angle','scale','tvec'] }
-        self.transform=transform       
-    def nudge_transform(self, xlim=200, ylim=200):        
-        def plot_transform(scale, angle, tx, ty, limits):
-            imT=ird.imreg.transform_img(self.I0zcn, scale=scale, angle=angle, tvec=(ty,tx))
-            diff=self.pm.R0-imT
-            fig, ax=plt.subplots(figsize=(8,8))
-            ax.imshow(diff, cmap='bwr', clim=[-limits,limits])
 
-        ty=widgets.FloatSlider(min=self.transform['tvec'][0]-ylim,
-                               max=self.transform['tvec'][0]+ylim,
-                               step=1,
-                               description='Translate in y:',
-                               value=self.transform['tvec'][0],
-                                continuous_update=False)
-
-        tx=widgets.FloatSlider(min=self.transform['tvec'][1]-xlim,
-                       max=self.transform['tvec'][1]+xlim,
-                       step=1,
-                       description='Translate in x:',
-                       value=self.transform['tvec'][1],
-                               continuous_update=False)
-        scale=widgets.FloatSlider(min=0,
-                               max=2,
-                               step=0.05,
-                               description='Scale:',
-                               value=self.transform['scale'],
-                                  continuous_update=False)
-        angle=widgets.FloatSlider(min=-180,
-                       max=180,
-                       step=0.5,
-                       description='Angle (radians):',
-                       value=self.transform['angle'],
-                                  continuous_update=False)
-
-        limits=widgets.FloatSlider(min=0,
-                                  max=1,
-                                  step=0.01,
-                                  value=0.1,
-                                   description='Colourbar limits:',
-                                   continuous_update=False)
-
-        self.w=interactive(plot_transform,
-                      scale=scale, 
-                      angle=angle, 
-                      tx=tx,
-                      ty=ty,
-                      limits=limits
-                      )
-
-        display(self.w)
-    def confirm_nudge(self):
-        wargs=self.w.kwargs
-        self.transform['scale']=wargs['scale']
-        self.transform['angle']=wargs['angle']
-        self.transform['tvec']=(wargs['ty'],wargs['tx'])
-    def transform_images(self):
-        self.I0T=ird.transform_img_dict(self.I0zcn, self.transform)
-        self.I1T=ird.transform_img_dict(self.I1zc, self.transform)
-    def load_transform(self):
-        self.transform=pickle.load(open(self.fn[:8]+' interferometry registration.p', "rb" ))
-    def register(self, constraints=None, transform=None):
-        if transform is None:
-            t=ird.similarity(self.pm.R0, self.I0zcn, numiter=3, constraints=constraints)
-            transform = { your_key: t[your_key] for your_key in ['angle','scale','tvec'] }
-        self.transform=transform
-    def convert_to_magnetic_field():
-        self.B=5.99e18*self.pm.data/self.I1T
+    def convert_to_magnetic_field(self):
+        self.B=5.99e18*self.pm.data/self.DT
         self.data=self.B
         
         
