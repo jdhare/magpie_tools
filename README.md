@@ -30,4 +30,5 @@ Anaconda is probably the best distribution to use: https://www.anaconda.com/down
 `conda install opencv`
 
 The image registration algorithms are installed differently. At the command line, run:
+
 `pip install git+https://github.com/matejak/imreg_dft.git`
