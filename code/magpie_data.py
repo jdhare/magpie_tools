@@ -1,7 +1,6 @@
 import numpy as np
 import scipy as sp
 import matplotlib.pyplot as plt
-#import colormaps as cmaps
 from scipy.ndimage.interpolation import rotate
 from scipy.ndimage import zoom
 import os
@@ -32,10 +31,10 @@ class DataMap:
         return ax.imshow(d, clim=clim, cmap=self.cmap)
     def set_origin(self, origin, extent):
         self.origin=origin
-        ymin=origin[0]-extent[1]*self.scale
-        ymax=origin[0]-extent[0]*self.scale
-        xmin=origin[1]+extent[2]*self.scale
-        xmax=origin[1]+extent[3]*self.scale
+        ymin=int(origin[0]-extent[1]*self.scale)
+        ymax=int(origin[0]-extent[0]*self.scale)
+        xmin=int(origin[1]+extent[2]*self.scale)
+        xmax=int(origin[1]+extent[3]*self.scale)
         self.origin_crop=(extent[1]*self.scale,-extent[2]*self.scale)
         self.data_c=self.data[ymin:ymax, xmin:xmax]
         self.extent=extent[2:4]+extent[0:2]
@@ -99,9 +98,9 @@ class DataMap:
                                description='Scale:',
                                value=self.transform['scale'],
                                   continuous_update=False)
-        angle=widgets.FloatSlider(min=-180,
-                       max=180,
-                       step=0.5,
+        angle=widgets.FloatSlider(min=self.transform['angle']-10,
+                       max=self.transform['angle']+10,
+                       step=0.1,
                        description='Angle (radians):',
                        value=self.transform['angle'],
                                   continuous_update=False)
@@ -136,8 +135,19 @@ class DataMap:
             pickle.dump(self.transform, open(fn, 'wb'))
         except:
             print('No Transform found!')
-    def load_transform(self):
-        self.transform=pickle.load(open(self.transform_fn, "rb" ))
+    def load_transform(self, fn=None):
+        if fn is None:
+            self.transform=pickle.load(open(self.transform_fn, "rb" ))
+        else:
+            self.transform=pickle.load(open(fn, "rb" ))
+    def duplicate_extent(self, image=None):
+        if image is None:
+            self.scale=self.pm.scale
+            self.set_origin(self.pm.origin, extent=self.pm.extent[2:4]+self.pm.extent[0:2])
+        else:
+            self.scale=image.scale
+            self.set_origin(image.origin, extent=image.extent[2:4]+image.extent[0:2])
+
 
     
 class NeLMap(DataMap):
@@ -152,7 +162,7 @@ class NeLMap(DataMap):
             d=rotate(d, rot_angle)
         self.data=d*multiply_by
         self.scale=scale
-        self.cmap=cmaps.cmaps['inferno']
+        self.cmap='inferno'
         
 class Interferogram(DataMap):
     def __init__(self, filename, scale, flip_lr=False, rot_angle=None):
@@ -204,6 +214,7 @@ class PolarimetryMap(DataMap):
         self.diff=np.nan_to_num(diff)
         beta=beta*np.pi/180
         self.data=-(180/np.pi)*0.5*np.arcsin(self.diff*np.tan(beta)/2.0)
+
         
 class InterferogramOntoPolarimetry(DataMap):
     def __init__(self, polmap, I0, I1):
