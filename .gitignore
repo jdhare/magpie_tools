@@ -1,1 +1,7 @@
 templates/.ipynb_checkpoints/faraday_template-checkpoint.ipynb
+templates/zb_W.dat
+templates/zb_C.dat
+templates/zb_Al.dat
+*.pyc
+templates/zb_Spk_C_NLTE.txt
+*.pyc
