@@ -70,7 +70,7 @@ class Plasma:
         self.V_te=np.sqrt(k*T_e/m_e)
         self.V_ti=np.sqrt(k*T_i/m_i)
         self.V_S=np.sqrt(k*(Z*T_e+T_i)/m_i)
-        self.V_A=np.sqrt(B/(mu_0*n_i*m_i))
+        self.V_A=np.sqrt(B**2/(mu_0*n_i*m_i))
 
         # Frequencies
         self.om_ce=e*B/m_e
@@ -79,10 +79,19 @@ class Plasma:
         self.om_pi=np.sqrt(Z**2*e**2*n_i/(cons.epsilon_0*m_i))
         self.calculate_collision_frequencies()
         
+        # Time scales:
+        self.tau_ei=1/self.nu_ei
+        self.tau_E_ei=self.tau_ei*A*(cons.m_u/(2*m_e))
+        try:
+            self.tau_ie_cooling=T_i/(Z*(T_e-T_i))*self.tau_E_ei
+        except ZeroDivisionError:
+            pass
+            
         #resistvity
-        #self.sigma_0=n_e*e**2/(m_e*self.nu_ei) #s kg^-3 m^-3 C^-3
-        #self.D_M=1/(mu_0*self.sigma_0) #m^2/s, eta/mu_0
-        self.eta=(np.pi*Z*e**2*m_e**0.5*self.col_log_ei)/((4*np.pi*cons.epsilon_0)**2*(k*T_e)**1.5) #Chen PPCF
+        self.sigma_0=n_e*e**2/(m_e*self.nu_ei) #s kg^-3 m^-3 C^-3
+        self.D_M=1/(mu_0*self.sigma_0) #m^2/s, eta/mu_0
+        self.eta=self.D_M*mu_0
+        #self.eta=(np.pi*Z*e**2*m_e**0.5*self.col_log_ei)/((4*np.pi*cons.epsilon_0)**2*(k*T_e)**1.5) #Chen PPCF
 
         #length scales
         self.la_de=np.sqrt(cons.epsilon_0*k*T_e/(n_e*e**2))
@@ -152,7 +161,10 @@ class Plasma:
         self.nu_ei=2.91e-6*Z*n_e*self.col_log_ei*T_e**-1.5#electrons on ions
         self.nu_ie=4.80e-8*Z**4*A**-0.5*n_i*self.col_log_ei*T_i**-1.5 #ions on electrons
         self.nu_eq=1.8e-19*(A*cons.m_u*cons.m_e)**0.5*Z**2*n_e*self.col_log_ei/(A*cons.m_u*T_e+cons.m_e*T_i)**1.5
-        self.D_M=8e5*self.col_log_ei*Z*T_e**-1.5 #magnetic diffusivity, counterpart to viscosity, cm^2/s
+        
+        self.ion=Particle(m=A, Z=Z, T=T_i, v=None,n=n_i)
+        self.electron=Particle(m=cons.m_e/cons.m_u, Z=-1, T=T_e, v=None,n=n_e)
+                
 
     def print_dim_params(self):
         im='Ion magnetisation = '+str(round_to_n(self.i_mag,2))
@@ -178,6 +190,7 @@ col_log_ei=np.vectorize(col_log_eis)
 #CGS for v, n, eV for T, m in atomic mass units
 #test particle a slows on a field of particles b
 #nu_ab is not equal to nu_ba!!!
+c=cons
 class Particle:
     def __init__(self, m, Z, v, T, n):
         self.m=float(m)
@@ -240,7 +253,7 @@ def col_log(a,b, T_e=None):
 def nu_0(a,b, T_e=None):
     return 4*np.pi*a.e**2*b.e**2*col_log(a,b, T_e)*b.n/(a.m_g**2*np.abs(a.v)**3)
 
-def psi(x, steps=1e3):
+def psi(x, steps=1e6):
     t=np.linspace(0, x, steps)
     integrand=t**0.5*np.exp(-t)
     return 2/np.sqrt(np.pi)*np.trapz(integrand, x=t)
