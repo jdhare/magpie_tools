@@ -10,8 +10,8 @@ import numpy as np
 import matplotlib.pyplot as plt
 import warnings
 warnings.filterwarnings("error")
-start_date = date(2015,6,1)
-end_date = date(2017,11,1)
+start_date = date(2017,9,5)
+end_date = date(2017,11,10)
 
 delta = end_date - start_date         # timedelta
 shots=[]
@@ -28,7 +28,7 @@ for i in range(delta.days + 1):
 md=[MachineDiagnostics(s) for s in shots]
 s=[m.calculate_LGS_times() for m in md]
 spreads=[m.LGS_spread for m in md]
-peak_current=[m.calculate_peak_current() for m in md]
+peak_current=[m.calculate_peak_current(mitl_bdot=2) for m in md]
 #%%
 fig,ax=plt.subplots()
 ax.scatter(spreads,peak_current)
@@ -76,7 +76,7 @@ fig, ax=plt.subplots(2,1,figsize=(8,8))
 for tmm,c in zip(tm, colors):
     ax[0].plot(tmm.time, tmm.data, label=tmm.shot, c=c)
     
-ax[0].set_xlim(100,400)
+ax[0].set_xlim(100,500)
 #ax.set_ylim(0,5)
 ax[0].legend()
 
