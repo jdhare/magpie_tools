@@ -209,7 +209,7 @@ class PolarimetryMap(DataMap):
         self.D0=self.S0/self.B0
         self.D1=self.S1/self.B1
         self.cmap='seismic'
-    def convert_to_alpha(self, beta=3.0):
+    def convert_to_alpha(self, beta):
         diff=self.D0-self.DT
         self.diff=np.nan_to_num(diff)
         beta=beta*np.pi/180
