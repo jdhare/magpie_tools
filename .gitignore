@@ -5,3 +5,11 @@ templates/zb_Al.dat
 *.pyc
 templates/zb_Spk_C_NLTE.txt
 *.pyc
+
+# don't commit users data
+Data/*
+!Data/gitkeep
+
+# don't commit crap I put in the root
+/*
+!README.md
