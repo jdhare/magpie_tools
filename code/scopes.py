@@ -377,7 +377,10 @@ class MachineDiagnostics:
             Args:
                 mitl_bdot: numbner from 0 to 3 to select Mitl bdot to integrate.
         '''
-        self.m.truncate()
+        try:
+            self.m.truncate()
+        except IndexError:
+            return None
         self.m.integrate()
         self.Peak_I=int(np.abs(self.m.mbds[mitl_bdot].B).max())
         return self.Peak_I

@@ -31,6 +31,7 @@ class DataMap:
         return ax.imshow(d, clim=clim, cmap=self.cmap)
     def set_origin(self, origin, extent):
         self.origin=origin
+        self.extent=extent
         ymin=int(origin[0]-extent[1]*self.scale)
         ymax=int(origin[0]-extent[0]*self.scale)
         xmin=int(origin[1]+extent[2]*self.scale)

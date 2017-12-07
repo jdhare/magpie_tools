@@ -10,8 +10,8 @@ import numpy as np
 import matplotlib.pyplot as plt
 import warnings
 warnings.filterwarnings("error")
-start_date = date(2017,9,5)
-end_date = date(2017,11,10)
+start_date = date(2017,1,1)
+end_date = date(2017,12,1)
 
 delta = end_date - start_date         # timedelta
 shots=[]
@@ -86,3 +86,16 @@ for lgg,c in zip(lg, colors):
 ax[1].set_xlim(1200,1600)
 ax[1].set_ylim(0,5)
 ax[1].legend()
+
+#%%
+for s in shots:
+    m=MitlBdots(s)
+    m.truncate()
+    m.integrate()
+    mb.append(m)
+    
+Peak_I=np.array([[int(np.abs(mm.B).max()) for mm in m.mbds] for m in mb])
+
+fig,ax=plt.subplots()
+ax.scatter(Peak_I[:,1],Peak_I[:,3])
+ax.set_xlim([200,350])

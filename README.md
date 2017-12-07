@@ -4,7 +4,7 @@ Python based tools for MAGPIE data analysis. There is the stable branch with cod
 There are three folders in this repo:
 
 * Code: this contains code and class definitions to support the notebooks in the other two folders. It can be used in other notebooks, or other python programs.
-* Tools: These can be used in their original folder, for simple tasks that don't require a paper trail. 
+* Tools: These can be used in their original folder, for simple tasks that don't require a paper trail.
 * Templates: You should copy these to another folder outside of the repository before using them. Each template should be customised for a specific shot you are analysing. You should always copy from the repository folder to ensure you get the latest version.
 
 If you modify any of the tools or templates, be aware that these changes will be overwritten by any updates. So do not store any data here
@@ -27,7 +27,7 @@ In order to run these jupyter notebooks, use shift+right click>"open command win
 ### What you need:
 Anaconda is probably the best distribution to use: https://www.anaconda.com/download/ - get the 64 bit version with the latest python kernl (3.6 as of writing). You may find that some packages you need are missing, but these can be installed using `conda install X` at the command line - ask for help if you need it. You will need at least:
 
-`conda install opencv`
+`conda install --channel https://conda.anaconda.org/menpo opencv3`
 
 The image registration algorithms are installed differently. At the command line, run:
 
