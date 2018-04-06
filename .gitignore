@@ -5,3 +5,5 @@ templates/zb_Al.dat
 *.pyc
 templates/zb_Spk_C_NLTE.txt
 *.pyc
+*.pyc
+*.pyc

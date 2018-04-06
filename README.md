@@ -28,6 +28,7 @@ In order to run these jupyter notebooks, use shift+right click>"open command win
 Anaconda is probably the best distribution to use: https://www.anaconda.com/download/ - get the 64 bit version with the latest python kernl (3.6 as of writing). You may find that some packages you need are missing, but these can be installed using `conda install X` at the command line - ask for help if you need it. You will need at least:
 
 `conda install --channel https://conda.anaconda.org/menpo opencv3`
+`conda install -c conda-forge imageio`
 
 The image registration algorithms are installed differently. At the command line, run:
 
