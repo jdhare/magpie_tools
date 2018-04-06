@@ -12,6 +12,10 @@ you are not prepared to lose - instead, make a copy of the file you want to chan
 
 In order to run these jupyter notebooks, use shift+right click>"open command window here" in the folder containing the notebook you want to use. Type 'jupyter notebook' at the command line and hit enter.
 
+### Current code:
+* **shot_statistics**: Can grab scope data from shots between a start and end date, and get statistics on trigger Marx timings, line gap switch spreads and integrated MITL b-dot signals. Useful for checking whether you got a 'good' current on your last shot, or to compare with Rogowski measurements. Quite buggy as occasionally there is no data from a scope and I haven't handled the errors well.
+* **plasma_parameter_calculator**: Calculates all sorts of useful parameters, from the Sonic Mach number to the viscosity, as well as mean free paths using the more complicated formulas from the NRL formulary.
+
 ### Current tools:
 * **fringe_tracing**: semi-automated fringe tracing. Will get the background interferogram perfectly, and will get unperturbed fringes in the shot interferogram pretty well.
 * **shiftr**: used to produced a set of 12 frame images that have been shifted so they all overlap
@@ -25,7 +29,7 @@ In order to run these jupyter notebooks, use shift+right click>"open command win
 * **xuv**: for aligning images from the 4-frame cameras.
 
 ### What you need:
-Anaconda is probably the best distribution to use: https://www.anaconda.com/download/ - get the 64 bit version with the latest python kernl (3.6 as of writing). You may find that some packages you need are missing, but these can be installed using `conda install X` at the command line - ask for help if you need it. You will need at least:
+Anaconda is probably the best distribution to use: https://www.anaconda.com/download/ - get the 64 bit version with the latest python kernel (3.6 as of writing). You may find that some packages you need are missing, but these can be installed using `conda install X` at the command line - ask for help if you need it. You will need at least:
 
 `conda install --channel https://conda.anaconda.org/menpo opencv3`
 `conda install -c conda-forge imageio`
