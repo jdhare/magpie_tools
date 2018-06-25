@@ -1,7 +1,8 @@
 import numpy as np
 import scipy as sp
 import matplotlib.pyplot as plt
-from scipy.ndimage.interpolation import rotate
+#from scipy.ndimage.interpolation import rotate
+from skimage.transform import rotate
 from scipy.ndimage import zoom
 import os
 from skimage.measure import profile_line
@@ -184,6 +185,28 @@ class Interferogram(DataMap):
             fig, ax=plt.subplots(figsize=(12,8))
         d=self.data_c
         return ax.imshow(d, interpolation='none', extent=self.extent, aspect=1)
+    
+class Shadowgram(DataMap):
+    def __init__(self, filename, scale, flip_lr=False, rot_angle=None, colour='g'):
+        self.fn=filename[:8]
+        d=plt.imread(filename)
+        if colour is 'g': #implement other colours as necessary
+            d=d[:,:,1]
+        if flip_lr is True:
+            d=np.fliplr(d)
+        if rot_angle is not None:
+            d=rotate(d, rot_angle)
+        self.data=d
+        self.scale=scale
+    def plot_data_px(self, ax=None):
+        if ax is None:
+            fig, ax=plt.subplots(figsize=(12,8))
+        return ax.imshow(self.data)
+    def plot_data_mm(self, ax=None):
+        if ax is None:
+            fig, ax=plt.subplots(figsize=(12,8))
+        d=self.data_c
+        return ax.imshow(d, interpolation='none', extent=self.extent, aspect=1)
 
 class PolarimetryMap(DataMap):
     def __init__(self, R0fn, R1fn, B0fn, B1fn, S0fn, S1fn, rot_angle=None):
@@ -210,11 +233,33 @@ class PolarimetryMap(DataMap):
         self.D0=self.S0/self.B0
         self.D1=self.S1/self.B1
         self.cmap='seismic'
-    def convert_to_alpha(self, beta):
-        diff=self.D0-self.DT
-        self.diff=np.nan_to_num(diff)
-        beta=beta*np.pi/180
-        self.data=-(180/np.pi)*0.5*np.arcsin(self.diff*np.tan(beta)/2.0)
+    def convert_to_alpha(self, beta, beta0=None, beta1=None, power_ratio=1):
+        '''
+        If you have two polarisers set to the same angle, use beta
+        If you know your polarisers were not at the same angle, and you know what that angle is, use beta1 and beta 2
+        Optionally, if you know the power ratio, IS/IB 
+        (say from comparing a region of the reference beam in the background and shot interferograms)
+        you can provide it
+        '''
+        if beta1 is None: #simple version when polarisers are at the same angle
+            diff=self.D0-self.DT
+            self.diff=np.nan_to_num(diff)
+            beta=beta*np.pi/180
+            self.data=-(180/np.pi)*0.5*np.arcsin(self.diff*np.tan(beta)/2.0)
+        else:#polarisers set at different angles
+            bp=beta0*np.pi/180
+            bm=beta1*np.pi/180
+            self.diff=self.D0*np.sin(bp)**2-self.DT*np.sin(bm)**2
+            
+            app=0.5*(np.arcsin(1/power_ratio*self.diff/np.sin(bp+bm))-bp+bm)
+            self.data=app*180/np.pi
+                        
+    def single_channel_analysis(self, beta0, beta1):
+        beta0=beta0*np.pi/180
+        beta1=beta1*np.pi/180
+        self.alpha0=180/np.pi*(np.arcsin(self.D0**0.5*np.sin(beta0))-beta0)
+        self.alpha1=180/np.pi*(-np.arcsin(self.D1**0.5*np.sin(beta1))+beta1)
+
 
 
 class InterferogramOntoPolarimetry(DataMap):
