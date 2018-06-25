@@ -371,13 +371,17 @@ class MachineDiagnostics:
         self.LGT=ScopeChannel(shot, "11", self.LGS_channels[LGT_channel])
         self.m=MitlBdots(shot)
         self.LGS=[ScopeChannel(shot, "10", self.LGS_channels[switch]) for switch in ['G','H','C','Z']]
+        self.shot=shot
     def calculate_peak_current(self, mitl_bdot=3):
         '''
             Integrate one of the Mitl b-dots to get a relative measure of the peak current.
             Args:
                 mitl_bdot: numbner from 0 to 3 to select Mitl bdot to integrate.
         '''
-        self.m.truncate()
+        try:
+            self.m.truncate()
+        except IndexError:
+            return None
         self.m.integrate()
         self.Peak_I=int(np.abs(self.m.mbds[mitl_bdot].B).max())
         return self.Peak_I

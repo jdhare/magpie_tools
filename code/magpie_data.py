@@ -1,12 +1,13 @@
 import numpy as np
 import scipy as sp
 import matplotlib.pyplot as plt
-from scipy.ndimage.interpolation import rotate
+#from scipy.ndimage.interpolation import rotate
+from skimage.transform import rotate
 from scipy.ndimage import zoom
 import os
 from skimage.measure import profile_line
 import imreg_dft as ird
-import images2gif as ig
+import imageio
 import pickle
 from ipywidgets import interact, interactive, fixed
 import ipywidgets as widgets
@@ -31,6 +32,7 @@ class DataMap:
         return ax.imshow(d, clim=clim, cmap=self.cmap)
     def set_origin(self, origin, extent):
         self.origin=origin
+        self.extent=extent
         ymin=int(origin[0]-extent[1]*self.scale)
         ymax=int(origin[0]-extent[0]*self.scale)
         xmin=int(origin[1]+extent[2]*self.scale)
@@ -60,19 +62,19 @@ class DataMap:
     def plot_lineout(self, ax=None, label='', multiply_by=1):
         if ax is None:
             fig, ax=plt.subplots(figsize=(12,8))
-        ax.plot(self.mm, self.lo*multiply_by, label=label, lw=4)        
+        ax.plot(self.mm, self.lo*multiply_by, label=label, lw=4)
     def mm_to_px(self,mm):
         scale=self.scale
         px_origin=self.origin_crop
         return (int(-mm[0]*scale+px_origin[0]),int(mm[1]*scale+px_origin[1]))
-    
+
     #Functions for transforms - not every child class uses these, but they are reused often enough
     def register(self, constraints=None, transform=None):
         if transform is None:
             t=ird.similarity(self.R0, self.R1, numiter=3, constraints=constraints)
             transform = { your_key: t[your_key] for your_key in ['angle','scale','tvec'] }
         self.transform=transform
-    def nudge_transform(self, xlim=100, ylim=100):        
+    def nudge_transform(self, xlim=100, ylim=100):
         def plot_transform(scale, angle, tx, ty, limits):
             imT=ird.imreg.transform_img(self.R1, scale=scale, angle=angle, tvec=(ty,tx))
             diff=self.R0-imT
@@ -113,8 +115,8 @@ class DataMap:
                                    continuous_update=False)
 
         self.w=interactive(plot_transform,
-                      scale=scale, 
-                      angle=angle, 
+                      scale=scale,
+                      angle=angle,
                       tx=tx,
                       ty=ty,
                       limits=limits
@@ -149,7 +151,7 @@ class DataMap:
             self.set_origin(image.origin, extent=image.extent[2:4]+image.extent[0:2])
 
 
-    
+
 class NeLMap(DataMap):
     def __init__(self, filename, scale, multiply_by=1, flip_lr=False, rot_angle=None):
         self.fn=filename[:8]
@@ -163,11 +165,33 @@ class NeLMap(DataMap):
         self.data=d*multiply_by
         self.scale=scale
         self.cmap='inferno'
-        
+
 class Interferogram(DataMap):
     def __init__(self, filename, scale, flip_lr=False, rot_angle=None):
         self.fn=filename[:8]
         d=plt.imread(filename)
+        if flip_lr is True:
+            d=np.fliplr(d)
+        if rot_angle is not None:
+            d=rotate(d, rot_angle)
+        self.data=d
+        self.scale=scale
+    def plot_data_px(self, ax=None):
+        if ax is None:
+            fig, ax=plt.subplots(figsize=(12,8))
+        return ax.imshow(self.data)
+    def plot_data_mm(self, ax=None):
+        if ax is None:
+            fig, ax=plt.subplots(figsize=(12,8))
+        d=self.data_c
+        return ax.imshow(d, interpolation='none', extent=self.extent, aspect=1)
+    
+class Shadowgram(DataMap):
+    def __init__(self, filename, scale, flip_lr=False, rot_angle=None, colour='g'):
+        self.fn=filename[:8]
+        d=plt.imread(filename)
+        if colour is 'g': #implement other colours as necessary
+            d=d[:,:,1]
         if flip_lr is True:
             d=np.fliplr(d)
         if rot_angle is not None:
@@ -209,13 +233,35 @@ class PolarimetryMap(DataMap):
         self.D0=self.S0/self.B0
         self.D1=self.S1/self.B1
         self.cmap='seismic'
-    def convert_to_alpha(self, beta=3.0):
-        diff=self.D0-self.DT
-        self.diff=np.nan_to_num(diff)
-        beta=beta*np.pi/180
-        self.data=-(180/np.pi)*0.5*np.arcsin(self.diff*np.tan(beta)/2.0)
+    def convert_to_alpha(self, beta, beta0=None, beta1=None, power_ratio=1):
+        '''
+        If you have two polarisers set to the same angle, use beta
+        If you know your polarisers were not at the same angle, and you know what that angle is, use beta1 and beta 2
+        Optionally, if you know the power ratio, IS/IB 
+        (say from comparing a region of the reference beam in the background and shot interferograms)
+        you can provide it
+        '''
+        if beta1 is None: #simple version when polarisers are at the same angle
+            diff=self.D0-self.DT
+            self.diff=np.nan_to_num(diff)
+            beta=beta*np.pi/180
+            self.data=-(180/np.pi)*0.5*np.arcsin(self.diff*np.tan(beta)/2.0)
+        else:#polarisers set at different angles
+            bp=beta0*np.pi/180
+            bm=beta1*np.pi/180
+            self.diff=self.D0*np.sin(bp)**2-self.DT*np.sin(bm)**2
+            
+            app=0.5*(np.arcsin(1/power_ratio*self.diff/np.sin(bp+bm))-bp+bm)
+            self.data=app*180/np.pi
+                        
+    def single_channel_analysis(self, beta0, beta1):
+        beta0=beta0*np.pi/180
+        beta1=beta1*np.pi/180
+        self.alpha0=180/np.pi*(np.arcsin(self.D0**0.5*np.sin(beta0))-beta0)
+        self.alpha1=180/np.pi*(-np.arcsin(self.D1**0.5*np.sin(beta1))+beta1)
 
-        
+
+
 class InterferogramOntoPolarimetry(DataMap):
     def __init__(self, polmap, I0, I1):
         self.fn=I0[:8]
@@ -265,7 +311,7 @@ class FaradayMap(DataMap):
     def __init__(self, polmap, I0, ne, flip_ne=False):
         self.fn=polmap.fn[:8]
         self.transform_fn=self.fn[:8]+' interferometry registration.p'
-        
+
         I0=plt.imread(I0)
         self.I0s=np.sum(I0,2)
         I1=np.loadtxt(ne, delimiter=',')
@@ -285,7 +331,7 @@ class FaradayMap(DataMap):
         R0=self.R0
         scale_y=R0.shape[0]/self.I0s.shape[0]
         scale_x=R0.shape[1]/self.I0s.shape[1]
-        
+
         if scale_y>scale_x:
             scale=scale_y
             I0z=zoom(self.I0s, scale)
@@ -303,14 +349,14 @@ class FaradayMap(DataMap):
         self.R1=I0zc*(R0.max()/I0zc.max())
         self.D1=I1zc
         if flip_ne is True:
-            self.D1=np.flipud(I1zc)   
+            self.D1=np.flipud(I1zc)
         self.cmap='seismic'
 
     def convert_to_magnetic_field(self):
         self.B=5.99e18*self.pm.data/self.DT
         self.data=self.B
-        
-        
+
+
 class OpticalFrame(DataMap):
     def __init__(self, data, shot, scale, flip_lr, rot_angle):
         self.fn=shot
@@ -321,7 +367,7 @@ class OpticalFrame(DataMap):
         self.data=data
         self.scale=scale
         self.cmap='afmhot'
-        
+
 class OpticalFrames:
     def __init__(self, start, IF, scale, flip_lr=False, rot_angle=None):
         self.start=start
@@ -337,18 +383,18 @@ class OpticalFrames:
             if i<10:
                 st="0"+str(i)
             else:
-                st=str(i) 
+                st=str(i)
             bk_fn=self.shot+" Background_0"+st+".png"
             bk_im=cv2.imread(bk_fn,-1) #read background image
             #bk_im=np.asarray(np.sum(bk_im,2), dtype=float)
             bb=OpticalFrame(bk_im, self.shot, scale, flip_lr, rot_angle)
             b.append(bb)#np.asarray(np.sum(bk_im,2), dtype=float)) #convert to grrayscale
-            sh_fn=self.shot+" Shot_0"+st+".png" 
+            sh_fn=self.shot+" Shot_0"+st+".png"
             sh_im=cv2.imread(sh_fn,-1)
             ss=OpticalFrame(sh_im, self.shot, scale, flip_lr, rot_angle)
             s.append(ss)
         self.b=b
-        self.s=s       
+        self.s=s
     def crop(self, origin, xcrop, ycrop):
         x0=origin[1]
         y0=origin[0]
@@ -362,7 +408,7 @@ class OpticalFrames:
         xmin=origin[1]+extent[2]*self.scale
         xmax=origin[1]+extent[3]*self.scale
         self.origin_crop=(extent[1]*self.scale,-extent[2]*self.scale)
-        self.extent=extent[2:4]+extent[0:2]        
+        self.extent=extent[2:4]+extent[0:2]
         for bb in self.b:
             bb.set_origin(origin, extent)
         for ss in self.s:
@@ -377,31 +423,35 @@ class OpticalFrames:
             s_l=np.log(ss.data_c)
             s_nl=(np.clip(s_l, a_min=lv_min, a_max=lv_max)-lv_min)/(lv_max-lv_min)
             ss.data_log=s_nl
-    def save_gif(self, filename, clim, width=6, duration=0.2, log=True):
+    def save_frames_and_gif(self, clims, filename=None, frames_to_plot=None, width=6, duration=0.2, log=False):
         w=width
-        frame=self.s[0].data_c
+        frame=self.s[0].data_c #use this to find shape of canvas
+        if frames_to_plot is None: #plot all frames
+            frames_to_plot=range(0,len(self.s))
+        if filename is None:
+            filename=self.shot
+        if len(clims) is 1:
+            clims=clims*12
+
         h=w/frame.shape[1]*frame.shape[0]
         fig, ax=plt.subplots(figsize=(w,h))
-        hot_im=[]
-        for im in self.s:
+        for im in frames_to_plot:
             if log is True:
-                data=im.data_log
+                data=self.s[im].data_log
             else:
-                data=im.data_c
-            ax.imshow(data, cmap='afmhot', clim=clim)
+                data=self.s[im].data_c
+            ax.imshow(data, cmap='afmhot', clim=clims[im])
             plt.axis('off')
             fig.subplots_adjust(left=0, bottom=0, right=1.0, top=1.0,
                 wspace=0, hspace=0)
-            fig.canvas.draw()
-            w,h=fig.canvas.get_width_height()
-            buf=np.fromstring(fig.canvas.tostring_rgb(), dtype=np.uint8)
-            buf.shape=(h,w,3)
-            hot_im.append(buf)
-        ig.writeGif(filename+'.gif',hot_im, duration=duration)
-        
-        
-#for backwards compatibility reasons, odl notebooks might refer to eg. FaradayMap2, so let's link them here:
+            fig.savefig(filename+'_'+str(im+1)+'.png')
+        #now save the gif
+        images = []
+        for fn in [filename+'_'+str(im+1)+'.png' for im in frames_to_plot]:
+            images.append(imageio.imread(fn))
+        imageio.mimsave(filename+'.gif', images, duration=duration)
+
+#for backwards compatibility reasons, old notebooks might refer to eg. FaradayMap2, so let's link them here:
 FaradayMap2=FaradayMap
 PolarimetryMap2=PolarimetryMap
 NeLMap2=NeLMap
-        

@@ -4,13 +4,17 @@ Python based tools for MAGPIE data analysis. There is the stable branch with cod
 There are three folders in this repo:
 
 * Code: this contains code and class definitions to support the notebooks in the other two folders. It can be used in other notebooks, or other python programs.
-* Tools: These can be used in their original folder, for simple tasks that don't require a paper trail. 
+* Tools: These can be used in their original folder, for simple tasks that don't require a paper trail.
 * Templates: You should copy these to another folder outside of the repository before using them. Each template should be customised for a specific shot you are analysing. You should always copy from the repository folder to ensure you get the latest version.
 
 If you modify any of the tools or templates, be aware that these changes will be overwritten by any updates. So do not store any data here
 you are not prepared to lose - instead, make a copy of the file you want to change. Or you could fork the repo, make changes and submit a pull request if you think your changes will benefit everyone!
 
 In order to run these jupyter notebooks, use shift+right click>"open command window here" in the folder containing the notebook you want to use. Type 'jupyter notebook' at the command line and hit enter.
+
+### Current code:
+* **shot_statistics**: Can grab scope data from shots between a start and end date, and get statistics on trigger Marx timings, line gap switch spreads and integrated MITL b-dot signals. Useful for checking whether you got a 'good' current on your last shot, or to compare with Rogowski measurements. Quite buggy as occasionally there is no data from a scope and I haven't handled the errors well.
+* **plasma_parameter_calculator**: Calculates all sorts of useful parameters, from the Sonic Mach number to the viscosity, as well as mean free paths using the more complicated formulas from the NRL formulary.
 
 ### Current tools:
 * **fringe_tracing**: semi-automated fringe tracing. Will get the background interferogram perfectly, and will get unperturbed fringes in the shot interferogram pretty well.
@@ -25,9 +29,10 @@ In order to run these jupyter notebooks, use shift+right click>"open command win
 * **xuv**: for aligning images from the 4-frame cameras.
 
 ### What you need:
-Anaconda is probably the best distribution to use: https://www.anaconda.com/download/ - get the 64 bit version with the latest python kernl (3.6 as of writing). You may find that some packages you need are missing, but these can be installed using `conda install X` at the command line - ask for help if you need it. You will need at least:
+Anaconda is probably the best distribution to use: https://www.anaconda.com/download/ - get the 64 bit version with the latest python kernel (3.6 as of writing). You may find that some packages you need are missing, but these can be installed using `conda install X` at the command line - ask for help if you need it. You will need at least:
 
-`conda install opencv`
+`conda install --channel https://conda.anaconda.org/menpo opencv3`
+`conda install -c conda-forge imageio`
 
 The image registration algorithms are installed differently. At the command line, run:
 

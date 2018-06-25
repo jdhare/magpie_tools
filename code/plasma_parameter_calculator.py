@@ -122,13 +122,11 @@ class Plasma:
         self.Re_M=mu_0*self.L*V/self.eta
         self.S=mu_0*self.L*self.V_A/self.eta
 
-        '''
-        #other
-        self.visc=2e19*T_i**2.5/(self.col_log_ei*A**0.5*Z**4*n_i) #Ryutov 99 cm^2/s
-        #dimensionless parameters
+        
+        #dimensionless parameters dodgy?
         self.Re=self.L*self.V/self.visc
         self.Pr_M=self.Re_M/self.Re
-        '''       
+          
     def calculate_columb_logarithms(self):
         '''
         Switches back to CGS units to use the convienient formulas from the NRL formulary,
@@ -146,6 +144,10 @@ class Plasma:
             self.col_log_ei=23-np.log(n_e**0.5*Z*T_e**-1.5)
         else:
             self.col_log_ei=24-np.log(n_e**0.5*T_e**-1.0)
+            
+        self.visc=2e19*T_i**2.5/(self.col_log_ei*self.A**0.5*Z**4*n_i) #Ryutov 99 cm^2/s
+        self.visc=self.visc*1e-4 #convert to m^2/s
+
     def calculate_collision_frequencies(self):
         '''
         Switches back to CGS units to use the convienient formulas from the NRL formulary,
