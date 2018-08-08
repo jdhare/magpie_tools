@@ -37,3 +37,11 @@ Anaconda is probably the best distribution to use: https://www.anaconda.com/down
 The image registration algorithms are installed differently. At the command line, run:
 
 `pip install git+https://github.com/matejak/imreg_dft.git`
+
+In order for Python to find this code, you must add the folder where you put the code to the PATH:
+* Press the windows key and type 'environment'. Click 'Edit the system envrionment variables'
+* Click 'Environment Variables' in the window which appears.
+* Under 'System Variables' locate PYTHONPATH. Double click it.
+* Click 'New'. Paste the location of the folder containing this code, eg. C:\Users\jdhare\Documents\GitHub\magpie_tools
+* Click okay on the three windows which opened since you started this process.
+* Restart your jupyter notebook server (it'll be a command prompt window titled 'jupyter notebook'.
