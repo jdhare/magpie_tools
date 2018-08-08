@@ -23,9 +23,9 @@ In order to run these jupyter notebooks, use shift+right click>"open command win
 ### Current templates:
 * **faraday_template**: takes you from raw images to a polarogram, then overlays the interferogram onto that, and then you can add in a processed electron density map to get the magnetic field map. Lots of image registration!
 * **fast_frame**: takes images from shiftr and allows you to look at lineouts, play with levels and save out animated gifs.
+* **thomson**: fitting for Thomson scattering spectra in .asc format, exported from the Andor spectrometer. Uses an nLTE model to decompose Z and T_e, and offers full flexibility over specifying independent and dependent variables in fits.
 
 ### Coming soon(-ish)!
-* **thomson**: this requires a complete rewrite, but it was the first python program I really wrote and it's still very powerful
 * **xuv**: for aligning images from the 4-frame cameras.
 
 ### What you need:
