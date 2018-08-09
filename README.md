@@ -32,13 +32,16 @@ In order to run these jupyter notebooks, use shift+right click>"open command win
 Anaconda is probably the best distribution to use: https://www.anaconda.com/download/ - get the 64 bit version with the latest python kernel (3.6 as of writing). You may find that some packages you need are missing, but these can be installed using `conda install X` at the command line - ask for help if you need it. You will need at least:
 
 `conda install --channel https://conda.anaconda.org/menpo opencv3`
+
 `conda install -c conda-forge imageio`
+
+`conda install -c conda-forge lmfit`
 
 The image registration algorithms are installed differently. At the command line, run:
 
 `pip install git+https://github.com/matejak/imreg_dft.git`
 
-In order for Python to find this code, you must add the folder where you put the code to the PATH:
+In order for Python to find the code in this respository, you must add the folder where you put the code to the PATH:
 * Press the windows key and type 'environment'. Click 'Edit the system envrionment variables'
 * Click 'Environment Variables' in the window which appears.
 * Under 'System Variables' locate PYTHONPATH. Double click it.
