@@ -356,8 +356,9 @@ def S_k_omega_nLTE(lambda_range, lambda_in, theta,  Z_Te_table, T_e, T_i, n_e, A
         print("Nan alert:",T_e,T_i,n_e,V_fi,V_fe)
     return Skw/Skw.max() #normalise the spectrum
 
-def Skw_nLTE_stray_light_convolve(lambda_range, lambda_in, response, theta,  Z_Te_table, n_e, T_e, V_fe, A, T_i, V_fi, stray, amplitude, offset, shift):
+
+def Skw_nLTE_stray_light_convolve(lambda_range, interpolation_scale, lambda_in, response, theta,  Z_Te_table, n_e, T_e, V_fe, A, T_i, V_fi, stray, amplitude, offset, shift):
     skw=S_k_omega_nLTE(lambda_range, lambda_in, theta,  Z_Te_table, T_e, T_i, n_e, A,V_fi, V_fe)
     skw_conv=convolve(response,skw)
     skw_conv_stray=amplitude*skw_conv/skw_conv.max()+stray*response/response.max()+offset #add in some of the background to account for unshifted light
-    return skw_conv_stray
+    return skw_conv_stray[::interpolation_scale]
