@@ -7,7 +7,6 @@ from lmfit.models import VoigtModel
 import os
 import numpy as np
 
-
 class Fibre:
     def __init__(self, wavelength, background, shot, bkgd_ferr, shot_ferr, theta):
         self.lamb=wavelength*1e-9
@@ -68,9 +67,15 @@ class Fibre:
         for k,v in self.pp_valid.items():
             if v[1] is True: #independent variable
                 self.iv_dict[k]=self.pp_valid[k][0]#get first element of list
-        self.iv_dict['lambda_range']=self.lamb
+
+        interpolation_scale=100
+        interpolated_lambda=add_points_evenly(self.lamb, interpolation_scale)
+        interpolated_response=self.vm_fit.eval(x=interpolated_lambda)
+
+        self.iv_dict['lambda_range']=interpolated_lambda
+        self.iv_dict['interpolation_scale']=interpolation_scale
         self.iv_dict['lambda_in']=self.l0
-        self.iv_dict['response']=self.response
+        self.iv_dict['response']=interpolated_response
         self.iv_dict['theta']=self.theta
         self.iv_dict['Z_Te_table']=generate_ZTe_table(pp['A'][0])
         skw_func=Skw_nLTE_stray_light_convolve
@@ -91,7 +96,7 @@ class Fibre:
         params=self.skw_res.best_values.copy()
         for k,v in self.iv_dict.items():
             params[k]=v
-        [params.pop(k, None) for k in ['lambda_range','lambda_in','response', 'Z_Te_Table']]#remove pointless keys
+        [params.pop(k, None) for k in ['lambda_range','lambda_in','interpolation_scale','response', 'Z_Te_Table']]#remove pointless keys
 
 #        try:
 #            Te=self.skw_res.best_values['T_e']
@@ -160,7 +165,7 @@ class TS_Analysis:
             self.x_axis=data[:,0]
         os.chdir(ts_dir)
 
-    def plot_fibre_edges(self, spacing=17.8, offset=5):
+    def plot_fibre_edges(self, spacing=17.8, offset=8):
         '''
         Plots the intensity of the signal on each fibre.
         And also little red dots at where the fiber edges are currently meant to be.
@@ -396,3 +401,6 @@ def Z_finder(n_e, Te_experimental, Z_guess=4, element='Al'):
     index=np.where(Te_list>=Te_experimental)[0][0]
     Z=Z_Te_table[index,ind]
     return Z
+
+def add_points_evenly(initial_array, scale):
+    return np.linspace(initial_array[0], initial_array[-1], initial_array.size*scale-scale+1)
