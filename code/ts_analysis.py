@@ -91,7 +91,8 @@ class Fibre:
         params=self.skw_res.best_values.copy()
         for k,v in self.iv_dict.items():
             params[k]=v
-        [params.pop(k, None) for k in ['lambda_range','lambda_in','response', 'Z-Te_Table']]#remove pointless keys
+        [params.pop(k, None) for k in ['lambda_range','lambda_in','response', 'Z_Te_Table']]#remove pointless keys
+
 #        try:
 #            Te=self.skw_res.best_values['T_e']
 #        except KeyError: #if this is an independent variable it isn't in the fit
@@ -104,6 +105,8 @@ class Fibre:
 #        params['Ti']=Ti
 #        params['n_e']=self.pp_valid['n_e'][0]
         self.params=params
+        self.params['Z']=Z_nLTE(self.params['T_e'], self.iv_dict['Z_Te_table'])
+
     def calculate_alpha(self):
         lambda_De=7.43*(self.params['T_e']/self.params['n_e'])**0.5 #in m
         k=4*np.pi*np.sin(self.theta/2.0)/self.l0
@@ -256,7 +259,7 @@ class TS_Analysis:
         '''Probably the prettiest plot you've ever seen'''
         f=self.select_fibre(Fnum,Fset)
         try:
-            shift=f.fit_parameters['shift']
+            shift=f.params['shift']
         except KeyError:
             shift=0
         response=np.interp(f.lamb+shift, f.lamb, f.response)
@@ -276,54 +279,57 @@ class TS_Analysis:
         ax.set_ylabel('Intensity (a.u.)',fontsize=20*text_mul)
         ax.tick_params(labelsize=20*text_mul, pad=5, length=10, width=2)
         kms=r' $km\,s^{-1}$'
-        if f.fit_parameters['model']=='multi species':
+        '''
+        if f.params['model']=='multi species':
             string_list=[
-                    r'$F\,= $'+str(f.fit_parameters['Fj']),
-                    r'$A\,= $'+str(f.fit_parameters['Aj']),
-                    r'$Z\,= $'+str(f.fit_parameters['Zj']),
-                    r'$n_e= $'+str_to_n(f.fit_parameters['n_e']/1e17,2)+r'$\times$10$^{17} cm^{-3}$',
-                    r'$T_e= $'+str_to_n(f.fit_parameters['T_e'],2)+' $eV$',
-                    r'$T_i= $'+str_to_n(f.fit_parameters['T_i1'],2)+' $eV$',
-                    r'$V_{fi}= $'+str_to_n(f.fit_parameters['V_fi1']/1e3,2)+kms,
-                    r'$V_{fe}= $'+str_to_n(f.fit_parameters['V_fe']/1e3,2)+kms,
-                    r'$\alpha\,= $'+str_to_n(f.fit_parameters['alpha'],2),
+                    r'$F\,= $'+str(f.params['Fj']),
+                    r'$A\,= $'+str(f.params['Aj']),
+                    r'$Z\,= $'+str(f.params['Zj']),
+                    r'$n_e= $'+str_to_n(f.params['n_e']/1e17,2)+r'$\times$10$^{17} cm^{-3}$',
+                    r'$T_e= $'+str_to_n(f.params['T_e'],2)+' $eV$',
+                    r'$T_i= $'+str_to_n(f.params['T_i1'],2)+' $eV$',
+                    r'$V_{fi}= $'+str_to_n(f.params['V_fi1']/1e3,2)+kms,
+                    r'$V_{fe}= $'+str_to_n(f.params['V_fe']/1e3,2)+kms,
+                    r'$\alpha\,= $'+str_to_n(f.params['alpha'],2),
                     ]
-        if f.fit_parameters['model']=='two stream':
+        if f.params['model']=='two stream':
             string_list=[
-                r'$F\,= $'+str(f.fit_parameters['Fj']),
-                r'$A\,= $'+str(f.fit_parameters['Aj']),
-                r'$Z\,= $'+str(f.fit_parameters['Zj']),
-                r'$n_e= $'+str_to_n(f.fit_parameters['n_e']/1e17,2)+r'$\times$10$^{17} cm^{-3}$',
-                r'$T_e= $'+str_to_n(f.fit_parameters['T_e'],2)+' $eV$',
-                r'$T_{i,1}= $'+str_to_n(f.fit_parameters['T_i1'],2)+' $eV$',
-                r'$T_{i,2}= $'+str_to_n(f.fit_parameters['T_i2'],2)+' $eV$',
-                r'$V_{fi,1}= $'+str_to_n(f.fit_parameters['V_fi1']/1e3,2)+kms,
-                r'$V_{fi,2}= $'+str_to_n(f.fit_parameters['V_fi2']/1e3,2)+kms,
-                r'$V_{fe}= $'+str_to_n(f.fit_parameters['V_fe']/1e3,2)+kms,
-                r'$\alpha\,= $'+str_to_n(f.fit_parameters['alpha'],2),
+                r'$F\,= $'+str(f.params['Fj']),
+                r'$A\,= $'+str(f.params['Aj']),
+                r'$Z\,= $'+str(f.params['Zj']),
+                r'$n_e= $'+str_to_n(f.params['n_e']/1e17,2)+r'$\times$10$^{17} cm^{-3}$',
+                r'$T_e= $'+str_to_n(f.params['T_e'],2)+' $eV$',
+                r'$T_{i,1}= $'+str_to_n(f.params['T_i1'],2)+' $eV$',
+                r'$T_{i,2}= $'+str_to_n(f.params['T_i2'],2)+' $eV$',
+                r'$V_{fi,1}= $'+str_to_n(f.params['V_fi1']/1e3,2)+kms,
+                r'$V_{fi,2}= $'+str_to_n(f.params['V_fi2']/1e3,2)+kms,
+                r'$V_{fe}= $'+str_to_n(f.params['V_fe']/1e3,2)+kms,
+                r'$\alpha\,= $'+str_to_n(f.params['alpha'],2),
                 ]
-        if f.fit_parameters['model']=='nLTE':
+                '''
+        #if f.params['model']=='nLTE':
+        string_list=[
+                r'$A\,= $'+str(f.params['A']),
+                r'$Z\,= $'+str_to_n(f.params['Z'],2),
+                r'$n_e= $'+str_to_n(f.params['n_e']/1e17,2)+r'$\times$10$^{17} cm^{-3}$',
+                r'$T_e= $'+str_to_n(f.params['T_e'],2)+' $eV$',
+                r'$T_i= $'+str_to_n(f.params['T_i'],2)+' $eV$',
+                r'$V_{fi}= $'+str_to_n(f.params['V_fi']/1e3,2)+kms,
+                r'$V_{fe}= $'+str_to_n(f.params['V_fe']/1e3,2)+kms,
+                r'$\alpha\,= $'+str_to_n(f.params['alpha'],2),
+                ]
+        '''        if f.params['model']=='Collisional nLTE':
             string_list=[
-                    r'$A\,= $'+str(f.fit_parameters['A'][0]),
-                    r'$Z\,= $'+str_to_n(f.fit_parameters['Z'],2),
-                    r'$n_e= $'+str_to_n(f.fit_parameters['n_e']/1e17,2)+r'$\times$10$^{17} cm^{-3}$',
-                    r'$T_e= $'+str_to_n(f.fit_parameters['T_e'],2)+' $eV$',
-                    r'$T_i= $'+str_to_n(f.fit_parameters['T_i'],2)+' $eV$',
-                    r'$V_{fi}= $'+str_to_n(f.fit_parameters['V_fi']/1e3,2)+kms,
-                    r'$V_{fe}= $'+str_to_n(f.fit_parameters['V_fe']/1e3,2)+kms,
-                    r'$\alpha\,= $'+str_to_n(f.fit_parameters['alpha'],2),
+                    r'$A\,= $'+str(f.params['Aj'][0]),
+                    r'$Z\,= $'+str_to_n(f.params['Z'],2),
+                    r'$n_e= $'+str_to_n(f.params['n_e']/1e17,2)+r'$\times$10$^{17} cm^{-3}$',
+                    r'$T_e= $'+str_to_n(f.params['T_e'],2)+' $eV$',
+                    r'$T_i= $'+str_to_n(f.params['T_i1'],2)+' $eV$',
+                    r'$V_{fi}= $'+str_to_n(f.params['V_fi1']/1e3,2)+kms,
+                    r'$V_{fe}= $'+str_to_n(f.params['V_fe']/1e3,2)+kms,
+                    r'$\alpha\,= $'+str_to_n(f.params['alpha'],2),
                     ]
-        if f.fit_parameters['model']=='Collisional nLTE':
-            string_list=[
-                    r'$A\,= $'+str(f.fit_parameters['Aj'][0]),
-                    r'$Z\,= $'+str_to_n(f.fit_parameters['Z'],2),
-                    r'$n_e= $'+str_to_n(f.fit_parameters['n_e']/1e17,2)+r'$\times$10$^{17} cm^{-3}$',
-                    r'$T_e= $'+str_to_n(f.fit_parameters['T_e'],2)+' $eV$',
-                    r'$T_i= $'+str_to_n(f.fit_parameters['T_i1'],2)+' $eV$',
-                    r'$V_{fi}= $'+str_to_n(f.fit_parameters['V_fi1']/1e3,2)+kms,
-                    r'$V_{fe}= $'+str_to_n(f.fit_parameters['V_fe']/1e3,2)+kms,
-                    r'$\alpha\,= $'+str_to_n(f.fit_parameters['alpha'],2),
-                    ]
+        '''
 
         text_str=''
         for st in string_list:
@@ -354,7 +360,7 @@ def find_nearest(array,value):
 
 def generate_ZTe_table(A):
     if A is 12:
-        return np.genfromtxt('zb_Spk_C_NLTE.txt', delimiter='       ', skip_header=4)
+        return np.genfromtxt('zb_C.dat', delimiter='       ', skip_header=4)
     if A is 27:
         return np.genfromtxt('zb_Al.dat', delimiter=' ', skip_header=2)
     if A is 183:

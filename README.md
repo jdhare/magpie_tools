@@ -23,17 +23,28 @@ In order to run these jupyter notebooks, use shift+right click>"open command win
 ### Current templates:
 * **faraday_template**: takes you from raw images to a polarogram, then overlays the interferogram onto that, and then you can add in a processed electron density map to get the magnetic field map. Lots of image registration!
 * **fast_frame**: takes images from shiftr and allows you to look at lineouts, play with levels and save out animated gifs.
+* **thomson**: fitting for Thomson scattering spectra in .asc format, exported from the Andor spectrometer. Uses an nLTE model to decompose Z and T_e, and offers full flexibility over specifying independent and dependent variables in fits.
 
 ### Coming soon(-ish)!
-* **thomson**: this requires a complete rewrite, but it was the first python program I really wrote and it's still very powerful
 * **xuv**: for aligning images from the 4-frame cameras.
 
 ### What you need:
 Anaconda is probably the best distribution to use: https://www.anaconda.com/download/ - get the 64 bit version with the latest python kernel (3.6 as of writing). You may find that some packages you need are missing, but these can be installed using `conda install X` at the command line - ask for help if you need it. You will need at least:
 
 `conda install --channel https://conda.anaconda.org/menpo opencv3`
+
 `conda install -c conda-forge imageio`
+
+`conda install -c conda-forge lmfit`
 
 The image registration algorithms are installed differently. At the command line, run:
 
 `pip install git+https://github.com/matejak/imreg_dft.git`
+
+In order for Python to find the code in this respository, you must add the folder where you put the code to the PATH:
+* Press the windows key and type 'environment'. Click 'Edit the system envrionment variables'
+* Click 'Environment Variables' in the window which appears.
+* Under 'System Variables' locate PYTHONPATH. Double click it.
+* Click 'New'. Paste the location of the folder containing this code, eg. C:\Users\jdhare\Documents\GitHub\magpie_tools
+* Click okay on the three windows which opened since you started this process.
+* Restart your jupyter notebook server (it'll be a command prompt window titled 'jupyter notebook'.
