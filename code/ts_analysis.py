@@ -51,7 +51,7 @@ class Fibre:
         #the response is taken from the model so it is nice and smooth
         self.response=self.vm_fit.best_fit[low_i:high_i]
         self.shift=self.lamb-self.l0 #this is useful for plotting data
-    def fit_fibre(self, pp):
+    def fit_fibre(self, pp, interpolation_scale=1):
         '''
         Fit the shot data. This is complicated!
         This examines the dictionary provided, determines which are dependent and independent variables
@@ -68,7 +68,6 @@ class Fibre:
             if v[1] is True: #independent variable
                 self.iv_dict[k]=self.pp_valid[k][0]#get first element of list
 
-        interpolation_scale=100
         interpolated_lambda=add_points_evenly(self.lamb, interpolation_scale)
         interpolated_response=self.vm_fit.eval(x=interpolated_lambda)
 
