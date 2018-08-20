@@ -7,3 +7,5 @@ templates/zb_Spk_C_NLTE.txt
 *.pyc
 *.pyc
 *.pyc
+*.pyc
+code/__pycache__/scopes.cpython-35.pyc

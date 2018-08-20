@@ -63,6 +63,9 @@ class Fibre:
         valid_keys=['model','n_e','T_e','V_fe','A','T_i','V_fi','stray','amplitude', 'offset', 'shift']
         for k in valid_keys:
             self.pp_valid[k]=pp[k]
+        # if n_e is set to None, use the value read in from a file
+        if self.pp_valid['n_e'][0] is None:
+            self.pp_valid['n_e']=(self.n_e, self.pp_valid['n_e'][1])
         #sort into dictionaries based on another dictionary
         for k,v in self.pp_valid.items():
             if v[1] is True: #independent variable
@@ -162,6 +165,10 @@ class TS_Analysis:
         if calibration:
             data=np.genfromtxt(open(calibration,"rb"),delimiter="\t")
             self.x_axis=data[:,0]
+        try:
+            self.n_e=np.genfromtxt(self.s_name+' n_e at fibres.txt', delimiter=',', usecols=[1])
+        except OSError:
+            print('No electron density file found, enter electron densities manually.')
         os.chdir(ts_dir)
 
     def plot_fibre_edges(self, spacing=17.8, offset=8):
@@ -231,6 +238,12 @@ class TS_Analysis:
         self.fibres=[Fibre(l,bkgd,shot,bkgd_err,shot_err, angle) for bkgd,shot,bkgd_err,shot_err, angle in params]
         self.fibres_a=self.fibres[:len(angle_a)]
         self.fibres_b=self.fibres[len(angle_a):]
+        try:
+            for fa,fb,nee in zip(self.fibres_a, self.fibres_b, self.n_e):
+                fa.n_e=nee
+                fb.n_e=nee
+        except AttributeError:
+            pass
     def copy_background(self, good, bad):
         self.fibres[bad].bkgd=self.fibres[good].bkgd.copy() #copy a good background to overwrite a bad one
     def select_fibre(self, Fnum, Fset):

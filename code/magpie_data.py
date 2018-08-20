@@ -68,6 +68,11 @@ class DataMap:
         scale=self.scale
         px_origin=self.origin_crop
         return (int(-mm[0]*scale+px_origin[0]),int(mm[1]*scale+px_origin[1]))
+    def px_to_mm(self,px):
+        scale=self.scale
+        px_origin=self.origin_crop
+        return (int(-mm[0]*scale+px_origin[0]),int(mm[1]*scale+px_origin[1]))
+
 
     #Functions for transforms - not every child class uses these, but they are reused often enough
     def register(self, constraints=None, transform=None):
