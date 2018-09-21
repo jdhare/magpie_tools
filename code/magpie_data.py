@@ -9,10 +9,12 @@ from skimage.measure import profile_line
 import imreg_dft as ird
 import imageio
 import pickle
-from ipywidgets import interact, interactive, fixed
+from ipywidgets import interact, interactive, fixed, FloatProgress
 import ipywidgets as widgets
 from IPython.display import display
 import cv2
+from lmfit.models import GaussianModel, ConstantModel
+from mpl_toolkits.axes_grid1 import ImageGrid
 
 
 class DataMap:
@@ -165,6 +167,83 @@ class NeLMap(DataMap):
         self.data=d*multiply_by
         self.scale=scale
         self.cmap='inferno'
+
+    # This perfroms a reverse abel inversion on the data by fitting a gaussian
+    # to each row within a specified range.
+    # y_lim = [y_start, y_end]
+    # x_range is the number of mm the software should go each way
+    def abel_invert(self, y_lim, x_range):
+        # Create the lmfit model
+        model = GaussianModel()
+        model += ConstantModel()
+        params = model.make_params()
+        params['c'].set(0.45)
+        params['center'].set(0, vary=False)
+        params['sigma'].set(min=0.001)
+
+        f = FloatProgress(min=0.3, max=4.5)
+        display(f)
+
+        self.fit = []
+        self.abel = []
+
+        xx = x_range
+        self.abel_extent = [-xx, xx, y_lim[0], y_lim[1]]
+        for yy in np.arange(y_lim[0], y_lim[1], 1/self.scale):
+            f.value = yy
+            self.create_lineout(start=(yy, -xx),
+                                end=(yy, xx),
+                                lineout_width_mm=1/self.scale)
+            # The data obtained by the lineout
+            y = self.lo
+            x = self.mm
+            out = model.fit(y, params, x=x)
+
+            self.fit.append(out.best_fit)
+            self.abel.append(self.abel_gauss(x,
+                                             out.best_values['sigma'],
+                                             out.best_values['amplitude'])*10)
+        # Change the lists to numpy arrays and flip them
+        self.fit = np.array(self.fit)[::-1]
+        self.abel = np.array(self.abel)[::-1]
+
+    # The abel transform of a gaussian
+    def abel_gauss(self, x, sigma, amplitude):
+        return amplitude/2/np.pi/sigma**2*np.exp(-x**2/2/sigma**2)
+
+    # Graph the result of the fit and Abel inversion
+    def plot_abel(self, fig=None):
+        if fig is None:
+            fig = plt.figure(figsize=(9, 3))
+        '''Set up image grid to show two images and a colourbar'''
+        grid = ImageGrid(fig, rect=(0.08, 0.1, 0.8, 0.8),
+                         nrows_ncols=(1, 3),
+                         axes_pad=0.3,
+                         share_all=True,
+                         cbar_location="top",
+                         cbar_mode="each",
+                         cbar_size="7%",
+                         cbar_pad=0.1,
+                         )
+
+        imshows = [None, None, None]
+        imshows[0] = self.plot_data_mm(ax=grid[0])
+        imshows[1] = grid[1].imshow(self.fit,
+                                    extent=self.abel_extent,
+                                    cmap=self.cmap)
+        imshows[2] = grid[2].imshow(self.abel,
+                                    extent=self.abel_extent,
+                                    cmap=self.cmap)
+        titles = ['Phase shift (rad)',
+                  'Fitted phase shift (rad)',
+                  'Reverse Abel Inverted (rad/cm)']
+        for n, a in enumerate(grid):
+            a.set_xlabel('x (mm)', fontsize=10)
+            a.tick_params(labelsize=10, pad=5, length=5, width=1)
+            c = a.cax.colorbar(imshows[n])
+            c.set_label_text(titles[n], fontsize=10)
+        grid[0].set_ylabel('y (mm)', fontsize=10, labelpad=0)
+
 
 class Interferogram(DataMap):
     def __init__(self, filename, scale, flip_lr=False, rot_angle=None):
