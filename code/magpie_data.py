@@ -172,14 +172,18 @@ class NeLMap(DataMap):
     # to each row within a specified range.
     # y_lim = [y_start, y_end]
     # x_range is the number of mm the software should go each way
-    def abel_invert(self, y_lim, x_range):
-        # Create the lmfit model
-        model = GaussianModel()
-        model += ConstantModel()
-        params = model.make_params()
-        params['c'].set(0.45)
-        params['center'].set(0, vary=False)
-        params['sigma'].set(min=0.001)
+    def abel_invert(self, y_lim, x_range, parameters=None, model=None):
+        if model is None:
+            # Create the lmfit model
+            model = GaussianModel()
+            model += ConstantModel()
+            params = model.make_params()
+            params['c'].set(0.45)
+            params['center'].set(0, vary=False)
+            params['sigma'].set(min=0.001)
+        if parameters is not None:
+            for key, value in parameters.items():
+                params[key].set(**value)
 
         f = FloatProgress(min=0.3, max=4.5)
         display(f)
