@@ -9,6 +9,7 @@ from skimage.measure import profile_line
 import imreg_dft as ird
 import imageio
 import pickle
+from copy import copy
 from ipywidgets import interact, interactive, fixed, FloatProgress
 import ipywidgets as widgets
 from IPython.display import display
@@ -152,6 +153,23 @@ class DataMap:
             self.scale=image.scale
             self.set_origin(image.origin, extent=image.extent[2:4]+image.extent[0:2])
 
+
+class DMFromArray(DataMap):
+    def __init__(self, array, scale, multiply_by=1, flip_lr=False, rot_angle=None, extent=None, origin=None):
+        self.fn = None
+        array = copy(array)
+        if flip_lr is True:
+            array = np.fliplr(array)
+        if rot_angle is not None:
+            array = rotate(array, rot_angle)
+        self.data = array*multiply_by
+        self.scale = scale
+        self.cmap = 'inferno'
+        if extent is not None:
+            self.extent = extent
+            self.data_c = self.data
+        if origin is not None:
+            self.origin_crop = origin
 
 
 class NeLMap(DataMap):
