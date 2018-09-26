@@ -129,11 +129,7 @@ def plot_compare(fig, image0, image1, clim0=None, clim1=None):
                    share_all=True,
                    )
     if clim0 is not None:
-        imshow0 = ax[0].imshow(image0, cmap='gray', clim=clim0)
-    else:
-        imshow0 = ax[0].imshow(image0, cmap='gray')
-    if clim1 is not None:
-        imshow1 = ax[1].imshow(image1, cmap='gray', clim=clim1)
-    else:
+    imshow0 = ax[0].imshow(image0, cmap='gray', clim=clim0)
+    imshow1 = ax[1].imshow(image1, cmap='gray', clim=clim1)
         imshow1 = ax[1].imshow(image1, cmap='gray')
     return imshow0, imshow1
