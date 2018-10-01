@@ -17,7 +17,8 @@ In order to run these jupyter notebooks, use shift+right click>"open command win
 * **plasma_parameter_calculator**: Calculates all sorts of useful parameters, from the Sonic Mach number to the viscosity, as well as mean free paths using the more complicated formulas from the NRL formulary.
 
 ### Current tools:
-* **fringe_tracing**: semi-automated fringe tracing. Will get the background interferogram perfectly, and will get unperturbed fringes in the shot interferogram pretty well.
+* **fringe_tracing_fourier**: semi-automated fringe tracing based on the 2D Fourier transform. Will get the background interferogram perfectly, and will get unperturbed fringes in the shot interferogram pretty well.
+* **fringe_tracing_smoothing**: a new, automated fringe tracing method based on smoothing the fringes' contours to make thinning work better. Highlights possible errors to make corrections by hand easier. Should get most of the interferogram well.
 * **shiftr**: used to produced a set of 12 frame images that have been shifted so they all overlap
 
 ### Current templates:
