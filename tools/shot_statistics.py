@@ -10,8 +10,8 @@ import numpy as np
 import matplotlib.pyplot as plt
 import warnings
 warnings.filterwarnings("error")
-start_date=date(2015,2,18)
-end_date=date(2015,3,15)
+start_date=date(2018,8,3)
+end_date=date(2018,8,18)
 
 delta = end_date - start_date         # timedelta
 all_shots=[]

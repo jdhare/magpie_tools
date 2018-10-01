@@ -51,7 +51,7 @@ class Fibre:
         #the response is taken from the model so it is nice and smooth
         self.response=self.vm_fit.best_fit[low_i:high_i]
         self.shift=self.lamb-self.l0 #this is useful for plotting data
-    def fit_fibre(self, pp, interpolation_scale=1):
+    def fit_fibre(self, pp, interpolation_scale=1, notch=None):
         '''
         Fit the shot data. This is complicated!
         This examines the dictionary provided, determines which are dependent and independent variables
@@ -60,9 +60,15 @@ class Fibre:
         self.pp_valid={}
         self.iv_dict={} #dictionary for independent variables
 
-        valid_keys=['model','n_e','T_e','V_fe','A','T_i','V_fi','stray','amplitude', 'offset', 'shift']
+        if pp['model'] is 'nLTE':
+            valid_keys=['model','n_e','T_e','V_fe','A','T_i','V_fi','stray','amplitude', 'offset', 'shift']
+        if pp['model'] is 'electron':
+            valid_keys=['model','n_e','T_e','V_fe','stray','amplitude', 'offset', 'shift']
         for k in valid_keys:
             self.pp_valid[k]=pp[k]
+        # if n_e is set to None, use the value read in from a file
+        if self.pp_valid['n_e'][0] is None:
+            self.pp_valid['n_e']=(self.n_e, self.pp_valid['n_e'][1])
         #sort into dictionaries based on another dictionary
         for k,v in self.pp_valid.items():
             if v[1] is True: #independent variable
@@ -76,8 +82,17 @@ class Fibre:
         self.iv_dict['lambda_in']=self.l0
         self.iv_dict['response']=interpolated_response
         self.iv_dict['theta']=self.theta
-        self.iv_dict['Z_Te_table']=generate_ZTe_table(pp['A'][0])
-        skw_func=Skw_nLTE_stray_light_convolve
+        if pp['model'] is 'nLTE':
+            self.iv_dict['Z_Te_table']=generate_ZTe_table(pp['A'][0])
+            skw_func=Skw_nLTE_stray_light_convolve
+        if pp['model'] is 'electron':
+            skw_func=Skw_e_stray_light_convolve
+
+        if notch is None:
+            self.iv_dict['notch']=np.zeros_like(self.shot)+1.0
+        if notch is not None:
+            self.iv_dict['notch']=notch
+
         skw=Model(skw_func, independent_vars=list(self.iv_dict.keys())) #create our model with our set variables.
         #our best guesses at what the fitting parameters should be
         for k,v in self.pp_valid.items():
@@ -86,9 +101,13 @@ class Fibre:
                     skw.set_param_hint(k, value = v[0], min=v[2]) #if a minimum is provided, use it
                 except IndexError:
                     skw.set_param_hint(k, value = v[0])
-
+        '''multiply shot by notch for fitting purposes'''
+        if notch is None:
+            shot=self.shot
+        else:
+            shot=self.shot*notch
         '''now do the fitting'''
-        self.skw_res=skw.fit(self.shot,verbose=False, **self.iv_dict)
+        self.skw_res=skw.fit(shot,verbose=False, **self.iv_dict)
         # get a dictionary of parameters used for the fit
         self.gather_parameters()
     def gather_parameters(self):
@@ -96,6 +115,10 @@ class Fibre:
         for k,v in self.iv_dict.items():
             params[k]=v
         [params.pop(k, None) for k in ['lambda_range','lambda_in','interpolation_scale','response', 'Z_Te_Table']]#remove pointless keys
+        try:
+            params.pop('notch', None)
+        except:
+            pass
 
 #        try:
 #            Te=self.skw_res.best_values['T_e']
@@ -109,7 +132,9 @@ class Fibre:
 #        params['Ti']=Ti
 #        params['n_e']=self.pp_valid['n_e'][0]
         self.params=params
-        self.params['Z']=Z_nLTE(self.params['T_e'], self.iv_dict['Z_Te_table'])
+        self.params['model']=self.pp_valid['model']
+        if self.params['model'] is 'nLTE':
+            self.params['Z']=Z_nLTE(self.params['T_e'], self.iv_dict['Z_Te_table'])
 
     def calculate_alpha(self):
         lambda_De=7.43*(self.params['T_e']/self.params['n_e'])**0.5 #in m
@@ -162,6 +187,10 @@ class TS_Analysis:
         if calibration:
             data=np.genfromtxt(open(calibration,"rb"),delimiter="\t")
             self.x_axis=data[:,0]
+        try:
+            self.n_e=np.genfromtxt(self.s_name+' n_e at fibres.txt', delimiter=',', usecols=[1])
+        except OSError:
+            print('No electron density file found, enter electron densities manually.')
         os.chdir(ts_dir)
 
     def plot_fibre_edges(self, spacing=17.8, offset=8):
@@ -181,7 +210,7 @@ class TS_Analysis:
         self.fibre_edges=fe
         self.plot_dots=self.ax_edge.plot(fe, pe[fe], 'r.')
     def find_fibre_edges(self):
-        interact(self.plot_fibre_edges, spacing=(10,30,0.1),offset=(0,512,1))
+        interact(self.plot_fibre_edges, spacing=(10,60,0.1),offset=(0,512,1))
     def split_into_fibres(self, discard_rows=3, numA=14):
         '''Splits the images into 1D arrays for each fibre'''
         fe=np.array(self.fibre_edges)
@@ -200,23 +229,30 @@ class TS_Analysis:
             bkgd_fibres[i]=self.background[fe[i]:fe[i+1],:].sum(0)
         self.bkgd_fibres=bkgd_fibres
         self.bkgd_frac_err=1/np.sqrt(bkgd_fibres)#assuming poisson stats, sigma=sqrt(y), so sigma/y=1/sqrt(y)
-    def zero_fibres(self, lower=500, upper=1500):
+    def zero_fibres(self, lower=500, upper=1500, dark_counts=None):
         self.shot_fibres_z=np.zeros((self.N_fibres,upper-lower))
         self.bkgd_fibres_z=np.zeros((self.N_fibres,upper-lower))
         self.S_T=np.zeros(self.N_fibres)
         for fin, f in enumerate(self.shot_fibres):
             #remove offset due to dark counts
-            mean1=f[0:300].mean()
-            mean2=f[-300:].mean()
-            mean=(mean1+mean2)/2
+            if dark_counts is None:
+                mean1=f[0:300].mean()
+                mean2=f[-300:].mean()
+                mean=(mean1+mean2)/2
+            else:
+                mean=dark_counts
             f=f-mean #zero the fibres
             self.S_T[fin]=np.trapz(f, x=self.x_axis) #calculate the total scattered amplitude
             f=f[lower:upper]
             self.shot_fibres_z[fin]=f
         for fin, f in enumerate(self.bkgd_fibres):
-            mean1=f[0:300].mean()
-            mean2=f[-300:].mean()
-            mean=(mean1+mean2)/2
+            #remove offset due to dark counts
+            if dark_counts is None:
+                mean1=f[0:300].mean()
+                mean2=f[-300:].mean()
+                mean=(mean1+mean2)/2
+            else:
+                mean=dark_counts
             f=f-mean #zero the fibres
             f=f[lower:upper]
             self.bkgd_fibres_z[fin]=f
@@ -231,6 +267,12 @@ class TS_Analysis:
         self.fibres=[Fibre(l,bkgd,shot,bkgd_err,shot_err, angle) for bkgd,shot,bkgd_err,shot_err, angle in params]
         self.fibres_a=self.fibres[:len(angle_a)]
         self.fibres_b=self.fibres[len(angle_a):]
+        try:
+            for fa,fb,nee in zip(self.fibres_a, self.fibres_b, self.n_e):
+                fa.n_e=nee
+                fb.n_e=nee
+        except AttributeError:
+            pass
     def copy_background(self, good, bad):
         self.fibres[bad].bkgd=self.fibres[good].bkgd.copy() #copy a good background to overwrite a bad one
     def select_fibre(self, Fnum, Fset):
@@ -249,7 +291,7 @@ class TS_Analysis:
         plot_data=ax.plot(f.lamb,f.shot,label='Data', marker='o',lw=2, c='b')
         #plotting region
         ax.set_ylim(bottom=0.0)
-        ax.set_xlim([531e-9,533e-9])
+        #ax.set_xlim([531e-9,533e-9])
         ax.set_xlabel(r'Wavelength (nm)',fontsize=20*text_mul)
         ax.set_ylabel('Intensity (a.u.)',fontsize=20*text_mul)
         ax.tick_params(labelsize=20*text_mul, pad=5, length=10, width=2)
@@ -270,32 +312,29 @@ class TS_Analysis:
         text_mul=tm
 
         bk_norm=0.5*f.shot.max()/f.bkgd.max()
-        fig, ax=plt.subplots(figsize=(16,10))
-        plot_data=ax.plot(f.shift*1e10,bk_norm*f.bkgd, label='Background', lw=2, marker='o', color='gray')
-        plot_data=ax.plot(f.shift*1e10,bk_norm*response, label='Response', lw=2, ls='--', color='black')
-        plot_data=ax.plot(f.shift*1e10,f.shot,label='Data', marker='o',lw=2, color='blue')
-        plot_fit=ax.plot(f.shift*1e10,f.skw_res.best_fit, label='Best Fit', lw=3, ls='--', color='red')
+        fig, ax=plt.subplots(figsize=(8,6))
+
+        plot_data=ax.plot(f.shift*1e10,bk_norm*f.bkgd, label='Background', lw=1, marker='o', color='gray')
+        plot_data=ax.plot(f.shift*1e10,bk_norm*response, label='Response', lw=1, ls='--', color='black')
+        plot_data=ax.scatter(f.shift*1e10,f.shot,label='Data', marker='o',lw=1, color='blue', alpha=0.5)
+        plot_fit=ax.plot(f.shift*1e10,f.skw_res.best_fit, label='Best Fit', lw=2, ls='--', color='red')
         #plotting region
         ax.set_ylim(bottom=0.0)
         ax.set_xlim([-sr,sr])
         ax.set_xticks(np.arange(-sr,sr+1,2))
-        ax.set_xlabel(r'Wavelength shift, $(\AA)$',fontsize=20*text_mul)
-        ax.set_ylabel('Intensity (a.u.)',fontsize=20*text_mul)
-        ax.tick_params(labelsize=20*text_mul, pad=5, length=10, width=2)
+        ax.set_xlabel(r'Wavelength shift, $(\AA)$',fontsize=10*text_mul)
+        ax.set_ylabel('Intensity (a.u.)',fontsize=10*text_mul)
+        ax.tick_params(labelsize=10*text_mul, pad=5, length=10, width=2)
         kms=r' $km\,s^{-1}$'
-        '''
-        if f.params['model']=='multi species':
+
+        if f.params['model'] is 'electron':
             string_list=[
-                    r'$F\,= $'+str(f.params['Fj']),
-                    r'$A\,= $'+str(f.params['Aj']),
-                    r'$Z\,= $'+str(f.params['Zj']),
                     r'$n_e= $'+str_to_n(f.params['n_e']/1e17,2)+r'$\times$10$^{17} cm^{-3}$',
                     r'$T_e= $'+str_to_n(f.params['T_e'],2)+' $eV$',
-                    r'$T_i= $'+str_to_n(f.params['T_i1'],2)+' $eV$',
-                    r'$V_{fi}= $'+str_to_n(f.params['V_fi1']/1e3,2)+kms,
                     r'$V_{fe}= $'+str_to_n(f.params['V_fe']/1e3,2)+kms,
                     r'$\alpha\,= $'+str_to_n(f.params['alpha'],2),
                     ]
+        '''
         if f.params['model']=='two stream':
             string_list=[
                 r'$F\,= $'+str(f.params['Fj']),
@@ -311,17 +350,17 @@ class TS_Analysis:
                 r'$\alpha\,= $'+str_to_n(f.params['alpha'],2),
                 ]
                 '''
-        #if f.params['model']=='nLTE':
-        string_list=[
-                r'$A\,= $'+str(f.params['A']),
-                r'$Z\,= $'+str_to_n(f.params['Z'],2),
-                r'$n_e= $'+str_to_n(f.params['n_e']/1e17,2)+r'$\times$10$^{17} cm^{-3}$',
-                r'$T_e= $'+str_to_n(f.params['T_e'],2)+' $eV$',
-                r'$T_i= $'+str_to_n(f.params['T_i'],2)+' $eV$',
-                r'$V_{fi}= $'+str_to_n(f.params['V_fi']/1e3,2)+kms,
-                r'$V_{fe}= $'+str_to_n(f.params['V_fe']/1e3,2)+kms,
-                r'$\alpha\,= $'+str_to_n(f.params['alpha'],2),
-                ]
+        if f.params['model'] is 'nLTE':
+            string_list=[
+                    r'$A\,= $'+str(f.params['A']),
+                    r'$Z\,= $'+str_to_n(f.params['Z'],2),
+                    r'$n_e= $'+str_to_n(f.params['n_e']/1e17,2)+r'$\times$10$^{17} cm^{-3}$',
+                    r'$T_e= $'+str_to_n(f.params['T_e'],2)+' $eV$',
+                    r'$T_i= $'+str_to_n(f.params['T_i'],2)+' $eV$',
+                    r'$V_{fi}= $'+str_to_n(f.params['V_fi']/1e3,2)+kms,
+                    r'$V_{fe}= $'+str_to_n(f.params['V_fe']/1e3,2)+kms,
+                    r'$\alpha\,= $'+str_to_n(f.params['alpha'],2),
+                    ]
         '''        if f.params['model']=='Collisional nLTE':
             string_list=[
                     r'$A\,= $'+str(f.params['Aj'][0]),
@@ -344,12 +383,12 @@ class TS_Analysis:
         props = dict(boxstyle='round', facecolor='gray', alpha=0.2)
 
         # place a text box in upper left in axes coords
-        ax.text(0.02, 0.96, text_str, transform=ax.transAxes, fontsize=20*text_mul,
+        ax.text(0.02, 0.96, text_str, transform=ax.transAxes, fontsize=10*text_mul,
             verticalalignment='top', bbox=props)
 
         title_str=self.s_name+': Fit of Thomson Scattering for fibre '+str(Fnum)+Fset+r', $\theta=$'+str(f.theta)+r'$^{\circ}$'
-        ax.set_title(title_str,fontsize=20*text_mul)
-        ax.legend(fontsize=18*text_mul)
+        ax.set_title(title_str,fontsize=10*text_mul)
+        ax.legend(fontsize=10*text_mul)
         plt.tight_layout()
         self.fig=fig
         self.ax=ax

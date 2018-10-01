@@ -1,6 +1,7 @@
 import numpy as np
 import scipy as sp
 import matplotlib.pyplot as plt
+
 #from scipy.ndimage.interpolation import rotate
 from skimage.transform import rotate
 from scipy.ndimage import zoom
@@ -20,7 +21,7 @@ class DataMap:
         if flip_lr is True:
             self.d=np.fliplr(self.d)
         if rot_angle is not None:
-            self.d=rotate(self.d, rot_angle)
+            self.d=rotate(self.d, rot_angle, resize=True)
         self.rot_angle=rot_angle
         self.data=self.d*multiply_by
         self.scale=scale
@@ -67,6 +68,9 @@ class DataMap:
         scale=self.scale
         px_origin=self.origin_crop
         return (int(-mm[0]*scale+px_origin[0]),int(mm[1]*scale+px_origin[1]))
+    def px_to_mm(self,px):
+        return (-(px[0]-self.origin[0])/self.scale,(px[1]-self.origin[1])/self.scale)
+
 
     #Functions for transforms - not every child class uses these, but they are reused often enough
     def register(self, constraints=None, transform=None):
@@ -161,7 +165,7 @@ class NeLMap(DataMap):
         if flip_lr is True:
             d=np.fliplr(d)
         if rot_angle is not None:
-            d=rotate(d, rot_angle)
+            d=rotate(d, rot_angle, resize=True)
         self.data=d*multiply_by
         self.scale=scale
         self.cmap='inferno'
@@ -173,7 +177,7 @@ class Interferogram(DataMap):
         if flip_lr is True:
             d=np.fliplr(d)
         if rot_angle is not None:
-            d=rotate(d, rot_angle)
+            d=rotate(d, rot_angle, resize=True)
         self.data=d
         self.scale=scale
     def plot_data_px(self, ax=None):
@@ -185,7 +189,7 @@ class Interferogram(DataMap):
             fig, ax=plt.subplots(figsize=(12,8))
         d=self.data_c
         return ax.imshow(d, interpolation='none', extent=self.extent, aspect=1)
-    
+
 class Shadowgram(DataMap):
     def __init__(self, filename, scale, flip_lr=False, rot_angle=None, colour='g'):
         self.fn=filename[:8]
@@ -195,7 +199,7 @@ class Shadowgram(DataMap):
         if flip_lr is True:
             d=np.fliplr(d)
         if rot_angle is not None:
-            d=rotate(d, rot_angle)
+            d=rotate(d, rot_angle, resize=True)
         self.data=d
         self.scale=scale
     def plot_data_px(self, ax=None):
@@ -220,12 +224,12 @@ class PolarimetryMap(DataMap):
         self.S0=plt.imread(S0fn)
         self.S1=np.fliplr(plt.imread(S1fn))
         if rot_angle is not None:
-            self.R0=rotate(self.R0, rot_angle)
-            self.R1=rotate(self.R1, rot_angle)
-            self.B0=rotate(self.B0, rot_angle)
-            self.B1=rotate(self.B1, rot_angle)
-            self.S0=rotate(self.S0, rot_angle)
-            self.S1=rotate(self.S1, rot_angle)
+            self.R0=rotate(self.R0, rot_angle, resize=True)
+            self.R1=rotate(self.R1, rot_angle, resize=True)
+            self.B0=rotate(self.B0, rot_angle, resize=True)
+            self.B1=rotate(self.B1, rot_angle, resize=True)
+            self.S0=rotate(self.S0, rot_angle, resize=True)
+            self.S1=rotate(self.S1, rot_angle, resize=True)
         #normalise registration images
         R0s=self.R0.sum()
         R1s=self.R1.sum()
@@ -237,7 +241,7 @@ class PolarimetryMap(DataMap):
         '''
         If you have two polarisers set to the same angle, use beta
         If you know your polarisers were not at the same angle, and you know what that angle is, use beta1 and beta 2
-        Optionally, if you know the power ratio, IS/IB 
+        Optionally, if you know the power ratio, IS/IB
         (say from comparing a region of the reference beam in the background and shot interferograms)
         you can provide it
         '''
@@ -250,10 +254,10 @@ class PolarimetryMap(DataMap):
             bp=beta0*np.pi/180
             bm=beta1*np.pi/180
             self.diff=self.D0*np.sin(bp)**2-self.DT*np.sin(bm)**2
-            
+
             app=0.5*(np.arcsin(1/power_ratio*self.diff/np.sin(bp+bm))-bp+bm)
             self.data=app*180/np.pi
-                        
+
     def single_channel_analysis(self, beta0, beta1):
         beta0=beta0*np.pi/180
         beta1=beta1*np.pi/180
@@ -278,8 +282,8 @@ class InterferogramOntoPolarimetry(DataMap):
         self.pm=polmap
         #rotate data to match polarisation map
         if self.pm.rot_angle is not None:
-            self.I0s=rotate(self.I0s,self.pm.rot_angle)
-            self.I1=rotate(self.I1,self.pm.rot_angle)
+            self.I0s=rotate(self.I0s,self.pm.rot_angle, resize=True)
+            self.I1=rotate(self.I1,self.pm.rot_angle, resize=True)
         #in order to perform image registration, the two images must be the same size
         #here we work out whether to rescale based on the x or y size of the image
         self.R0=self.pm.R0
@@ -323,8 +327,8 @@ class FaradayMap(DataMap):
         self.I1=np.flipud(self.I1)
         #rotate data to match polarisation map
         if self.pm.rot_angle is not None:
-            self.I0s=rotate(self.I0s,self.pm.rot_angle)
-            self.I1=rotate(self.I1,self.pm.rot_angle)
+            self.I0s=rotate(self.I0s,self.pm.rot_angle, resize=True)
+            self.I1=rotate(self.I1,self.pm.rot_angle, resize=True)
         #in order to perform image registration, the two images must be the same size
         #scale and flip to data
         self.R0=self.pm.R0
@@ -363,7 +367,7 @@ class OpticalFrame(DataMap):
         if flip_lr is True:
             data=np.fliplr(data)
         if rot_angle is not None:
-            data=rotate(data, rot_angle)
+            data=rotate(data, rot_angle, resize=True)
         self.data=data
         self.scale=scale
         self.cmap='afmhot'
