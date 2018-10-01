@@ -7,6 +7,7 @@ m_e=scipy.constants.m_e
 m_p=scipy.constants.m_p
 e=scipy.constants.e
 c=scipy.constants.c
+epsilon_0=scipy.constants.ep
 
 exp=np.exp
 Il=scipy.special.iv #modified bessel function of first kind
@@ -79,6 +80,174 @@ def S_k_omega_conv(lambda_range, lambda_in, response, theta, A, T_e,T_i,n_e,Z, v
     skw=S_k_omega(lambda_range, lambda_in, theta, A, T_e,T_i,n_e,Z, v_fi, v_fe)
     skw_conv=convolve(response,skw)
     return amp*skw_conv/skw_conv.max()
+
+def S_k_omega_e(lambda_range, lambda_in, theta,T_e,n_e, v_fe):
+    '''
+    Returns a normalised spectral density function for the electron component only
+    Implements the model of Sheffield (2nd Ed.)
+    One ion, one electron species with independent temeperatures
+    Electron velocity is with respect to ion velocity
+    Returns S(k,w) for each wavelength in lambda_range assuming
+    input wavelength lambda_in. Both in metres
+    Theta is angle between k_in and k_s in degrees
+    A i atomic mass, Z is ion charge
+    T_e, T_i in eV, n_e in cm^-3
+    V_fi and V_fe in m/s
+    '''
+    #physical parameters
+    pi=np.pi
+    om_pe=5.64e4*n_e**0.5#electron plasma frequency
+    #define omega and k as in Sheffield 113
+    ki=2*pi/lambda_in
+    omega_i=((c*ki)**2+om_pe**2)**0.5
+
+    ks=2*pi/lambda_range
+    omega_s=((c*ks)**2+om_pe**2)**0.5
+
+    th=theta/180.0*np.pi#convert to radians for cosine function
+    k=(ks**2+ki**2-2*ks*ki*np.cos(th))**0.5
+    omega=omega_s-omega_i
+
+    #define dimensionless parameters ala Sheffield
+    a=sqrt(2*e*T_e/m_e)
+    x_e=(omega/k+v_fe)/a
+    lambda_De=7.43*(T_e/n_e)**0.5 #Debeye length in m
+    #the all important alpha parameter
+    alpha=1/(k*lambda_De)
+    #set up the Fadeeva function
+    w=scipy.special.wofz
+
+    chi_e=alpha**2*(1+1j*sqrt(pi)*x_e*w(x_e))
+    epsilon=1+chi_e
+    #distribution functions
+    fe0=np.exp(-x_e**2)/a
+    Skw=2*sqrt(pi)/k*(np.abs(1-chi_e/epsilon)**2*fe0)
+
+    return Skw/Skw.max() #normalise the spectrum
+
+
+def Skw_e_stray_light_convolve(lambda_range, interpolation_scale, lambda_in, response, theta, n_e, T_e, V_fe, stray, amplitude, offset, shift, notch):
+    skw=S_k_omega_e(lambda_range, lambda_in, theta, T_e, n_e, V_fe)
+    skw_conv=convolve(response,skw)
+    skw_conv_stray=amplitude*skw_conv/skw_conv.max()+stray*response/response.max()+offset #add in some of the background to account for unshifted light
+    return skw_conv_stray[::interpolation_scale]*notch
+
+def S_k_omega_e_resonance(lambda_range, lambda_in, theta,T_e,n_e, v_fe):
+    '''
+    Returns a normalised spectral density function for the electron component only
+    Implements the model of Sheffield (2nd Ed.)
+    One ion, one electron species with independent temeperatures
+    Electron velocity is with respect to ion velocity
+    Returns S(k,w) for each wavelength in lambda_range assuming
+    input wavelength lambda_in. Both in metres
+    Theta is angle between k_in and k_s in degrees
+    A i atomic mass, Z is ion charge
+    T_e, T_i in eV, n_e in cm^-3
+    V_fi and V_fe in m/s
+    '''
+    #physical parameters
+    pi=np.pi
+    om_pe=5.64e4*n_e**0.5#electron plasma frequency
+    #define omega and k as in Sheffield 113
+    ki=2*pi/lambda_in
+    omega_i=((c*ki)**2+om_pe**2)**0.5
+
+    ks=2*pi/lambda_range
+    omega_s=((c*ks)**2+om_pe**2)**0.5
+
+    th=theta/180.0*np.pi#convert to radians for cosine function
+    k=(ks**2+ki**2-2*ks*ki*np.cos(th))**0.5
+    omega=omega_s-omega_i
+
+    res= np.sqrt(omega_p**2)
+    #define dimensionless parameters ala Sheffield
+    a=sqrt(2*e*T_e/m_e)
+    x_e=(omega/k+v_fe)/a
+    lambda_De=7.43*(T_e/n_e)**0.5 #Debeye length in m
+    #the all important alpha parameter
+    alpha=1/(k*lambda_De)
+    omega_p=np.sqrt(n_e*e**2/(m_e*epsilon_0))
+    res=np.sqrt(omega_p**2*(1+3/alpha**2))
+
+    #set up the Fadeeva function
+    w=scipy.special.wofz
+
+    chi_e=alpha**2*(1+1j*sqrt(pi)*x_e*w(x_e))
+    epsilon=1+chi_e
+    #distribution functions
+    fe0=np.exp(-x_e**2)/a
+    Skw=2*sqrt(pi)/k*(np.abs(1-chi_e/epsilon)**2*fe0)
+
+    return Skw/Skw.max() #normalise the spectrum
+
+def Skw_e_res_stray_light_convolve(lambda_range, interpolation_scale, lambda_in, response, theta, n_e, T_e, V_fe, stray, amplitude, offset, shift, notch):
+    skw=S_k_omega_e(lambda_range, lambda_in, theta, T_e, n_e, V_fe)
+    skw_conv=convolve(response,skw)
+    skw_conv_stray=amplitude*skw_conv/skw_conv.max()+stray*response/response.max()+offset #add in some of the background to account for unshifted light
+    return skw_conv_stray[::interpolation_scale]*notch
+
+def S_k_omega_V3D(lambda_range, lambda_in, theta_0, theta, phi, A, T_e,T_i,n_e,Z, V_fi, theta_V, phi_V):
+    '''
+    Spectral density function for a plasma with a velocity vector
+    Returns a normalised spectral density function.
+    Implements the model of Sheffield (2nd Ed.)
+    One ion, one electron species with independent temperatures
+    Returns S(k,w) for each wavelength in lambda_range assuming
+    input wavelength lambda_in. Both in metres
+    Theta is angle between k_in and k_s in degrees
+    Phi is the angle below the plane formed by k_in and the centre of the aperture in degrees
+    theta_V is the polar angle of the velocity (angle wrt to the centre of the lens)
+    phi_V is the azimuthal angle of the velocity (angle wrt scattering plane) See J Hare thesis fig 2.13
+    A is atomic mass, Z is ion charge
+    T_e, T_i in eV, n_e in cm^-3
+    V_fi and V_fe in m/s
+    V_fe must be 0
+    '''
+    #physical parameters
+    pi=np.pi
+    m_i=m_p*A
+    om_pe=5.64e4*n_e**0.5#electron plasma frequency
+    #define omega and k as in Sheffield 113
+    ki=2*pi/lambda_in
+    omega_i=((c*ki)**2+om_pe**2)**0.5
+    th0=theta_0/180.0*np.pi#convert to radians for cos, sin funcs.
+    ki_vec=np.array([np.sin(th0),0.0,np.cos(th0)])*ki#vector ki in direction [0,1,0]
+
+    ks=2*pi/lambda_range
+    omega_s=((c*ks)**2+om_pe**2)**0.5
+    th=theta/180.0*np.pi#convert to radians for cos, sin funcs.
+    ph=phi/180.0*np.pi
+    ks_vec=np.array([[ksi*np.sin(th)*np.cos(ph),ksi*np.sin(th)*np.sin(ph), ksi*np.cos(th)] for ksi in ks])
+
+    k_vec=ks_vec-ki_vec#vector k given by difference of two
+    k=np.array([np.sqrt(kvi[0]**2+kvi[1]**2+kvi[2]**2) for kvi in k_vec])#magnitude, (k_x**2+k_y**+k_z**2)**0.5
+    omega=omega_s-omega_i#corresponding frequency shift
+
+    th_V=theta_V/180.0*np.pi#phi_B defined wrt to k_i in plane
+    ph_V=phi_V/180.0*np.pi#psi_B defined wrt to k_i out of plane
+
+    V=V_fi*np.array([np.sin(th_V)*np.cos(ph_V), np.sin(th_V)*np.sin(ph_V), np.cos(th_V)])#unit vector in direction of B
+
+    #define dimensionless parameters ala Sheffield
+    a=sqrt(2*e*T_e/m_e)
+    b=sqrt(2*e*T_i/m_i)
+    kdotV=np.array([np.vdot(kk, V) for kk in k_vec])
+    x_i=(omega+kdotV)/(k*b)
+    x_e=(omega+kdotV)/(k*a)
+    lambda_De=7.43*(T_e/n_e)**0.5 #Debeye length in m
+    #the all important alpha parameter
+    alpha=1/(k*lambda_De)
+    #set up the Fadeeva function
+    w=scipy.special.wofz
+    chi_i=alpha**2*Z*T_e/T_i*(1+1j*sqrt(pi)*x_i*w(x_i)) #ion susceptibility
+    chi_e=alpha**2*(1+1j*sqrt(pi)*x_e*w(x_e))#electron susceptibility
+    fe0=np.exp(-x_e**2)/a
+    fi0=np.exp(-x_i**2)/b
+    ions=Z*fi0
+    epsilon=1+chi_e+chi_i
+
+    Skw=2*sqrt(pi)/k*(np.abs(1-chi_e/epsilon)**2*fe0+np.abs(chi_e/epsilon)**2*ions)
+    return Skw/Skw.max() #normalise the spectrum
 
 def exp_Il_approx(l,z):
     '''Asymptotic expansion of Il for large z allows us to cancel two huge exponential pre-factors'''
@@ -357,8 +526,8 @@ def S_k_omega_nLTE(lambda_range, lambda_in, theta,  Z_Te_table, T_e, T_i, n_e, A
     return Skw/Skw.max() #normalise the spectrum
 
 
-def Skw_nLTE_stray_light_convolve(lambda_range, interpolation_scale, lambda_in, response, theta,  Z_Te_table, n_e, T_e, V_fe, A, T_i, V_fi, stray, amplitude, offset, shift):
+def Skw_nLTE_stray_light_convolve(lambda_range, interpolation_scale, lambda_in, response, theta,  Z_Te_table, n_e, T_e, V_fe, A, T_i, V_fi, stray, amplitude, offset, shift, notch):
     skw=S_k_omega_nLTE(lambda_range, lambda_in, theta,  Z_Te_table, T_e, T_i, n_e, A,V_fi, V_fe)
     skw_conv=convolve(response,skw)
     skw_conv_stray=amplitude*skw_conv/skw_conv.max()+stray*response/response.max()+offset #add in some of the background to account for unshifted light
-    return skw_conv_stray[::interpolation_scale]
+    return skw_conv_stray[::interpolation_scale]*notch

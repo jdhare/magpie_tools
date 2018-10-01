@@ -101,6 +101,7 @@ class Plasma:
         self.rho_e=self.V_te/self.om_ce
         self.mfp_i=self.V_ti/self.nu_ie#cm
         self.mfp_e=self.V_te/self.nu_ei#cm
+        self.l_visc=(self.visc/self.V) # Re=1, viscous time scale= advective time scale
         
         #pressures
         self.P_B=B**2/(2*mu_0)
