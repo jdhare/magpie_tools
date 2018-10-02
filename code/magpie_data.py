@@ -258,12 +258,8 @@ class NeLMap(DataMap):
 
         imshows = [None, None, None]
         imshows[0] = self.plot_data_mm(ax=grid[0])
-        imshows[1] = grid[1].imshow(self.fit,
-                                    extent=self.abel_extent,
-                                    cmap=self.cmap)
-        imshows[2] = grid[2].imshow(self.abel,
-                                    extent=self.abel_extent,
-                                    cmap=self.cmap)
+        imshows[1] = self.fit.plot_data_mm(ax=grid[1])
+        imshows[2] = self.abel.plot_data_mm(ax=grid[2])
         titles = ['Phase shift (rad)',
                   'Fitted phase shift (rad)',
                   'Reverse Abel Inverted (rad/cm)']
