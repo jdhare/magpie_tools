@@ -210,8 +210,8 @@ class NeLMap(DataMap):
         f = FloatProgress(min=0.3, max=4.5)
         display(f)
 
-        self.fit = []
-        self.abel = []
+        fit_data = []
+        abel_data = []
 
         xx = x_range
         self.abel_extent = [-xx, xx, y_lim[0], y_lim[1]]
@@ -225,14 +225,18 @@ class NeLMap(DataMap):
             x = self.mm
             out = model.fit(y, params, x=x)
 
-            self.fit.append(out.best_fit)
-            self.abel.append(self.abel_gauss(x,
+            fit_data.append(out.best_fit)
+            abel_data.append(self.abel_gauss(x,
                                              out.best_values['sigma'],
-                                             out.best_values['amplitude'])*10)
+                                             out.best_values['amplitude'])*10)#*10 converts from mm^-1 to cm^-1
         # Change the lists to numpy arrays and flip them
-        self.fit = np.array(self.fit)[::-1]
-        self.abel = np.array(self.abel)[::-1]
-
+        fit_data=np.array(fit_data)[::-1]
+        abel_data = np.array(abel_data)[::-1]
+        extent=[-x_range,x_range,y_lim[0],y_lim[1]]
+        origin=[int(len(fit_data)+y_lim[0]*self.scale), int(len(fit_data[0])/2)]
+        self.fit=DMFromArray(fit_data, self.scale, extent=extent, origin=origin)
+        self.abel=DMFromArray(abel_data, self.scale, extent=extent, origin=origin)
+        return self.fit, self.abel
     # The abel transform of a gaussian
     def abel_gauss(self, x, sigma, amplitude):
         return amplitude/2/np.pi/sigma**2*np.exp(-x**2/2/sigma**2)
