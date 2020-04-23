@@ -138,7 +138,8 @@ class Fibre:
 
     def calculate_alpha(self):
         lambda_De=7.43*(self.params['T_e']/self.params['n_e'])**0.5 #in m
-        k=4*np.pi*np.sin(self.theta/2.0)/self.l0
+        th=self.theta*np.pi/180
+        k=4*np.pi*np.sin(th/2.0)/self.l0
         self.params['alpha']=np.abs(1/(k*lambda_De))
     def calculate_predicted_intensity(self):
         #calculate the expected TS intensity

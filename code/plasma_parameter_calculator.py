@@ -245,8 +245,8 @@ def col_log(a,b, T_e=None):
         elif Ti<TZ and TZ<Te:
             print('Ion-Electron, T_i*m_e/m_i<10 Z^2<T_e')
             return 24-np.log(el.n**0.5*el.T**-1.0)
-        elif Tie<io.Z*Ti:
-            print('Ion-Electron, T_i*m_e/m_i<10 Z^2<T_e')
+        elif Te<io.Z*Ti:
+            print('SUSPECT! Ion-Electron, T_i*m_e/m_i<10 Z^2<T_e')
             return 30-np.log(io.n**0.5*io.T**-1.5*io.Z**2/io.m)
         else:
             print('Ion-Electron: Whoops! You broke Physics!!!')

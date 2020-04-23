@@ -14,7 +14,7 @@ from copy import copy
 from ipywidgets import interact, interactive, fixed, FloatProgress
 import ipywidgets as widgets
 from IPython.display import display
-import cv2
+#import cv2
 from lmfit.models import GaussianModel, ConstantModel
 from mpl_toolkits.axes_grid1 import ImageGrid
 
@@ -62,7 +62,7 @@ class DataMap:
         self.lo=profile_line(self.data_c, start_px,end_px,linewidth=lineout_width_mm*self.scale)
         #set up a mm scale centred on 0
         px_range=self.lo.size/2
-        self.mm=np.linspace(-px_range, px_range, 2*px_range)/self.scale #flip range to match images
+        self.mm=np.linspace(-px_range, px_range, self.lo.size)/self.scale #flip range to match images
     def plot_lineout(self, ax=None, label='', multiply_by=1):
         if ax is None:
             fig, ax=plt.subplots(figsize=(12,8))

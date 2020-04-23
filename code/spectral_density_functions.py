@@ -7,7 +7,7 @@ m_e=scipy.constants.m_e
 m_p=scipy.constants.m_p
 e=scipy.constants.e
 c=scipy.constants.c
-epsilon_0=scipy.constants.ep
+epsilon_0=scipy.constants.epsilon_0
 
 exp=np.exp
 Il=scipy.special.iv #modified bessel function of first kind
@@ -495,13 +495,15 @@ def S_k_omega_nLTE(lambda_range, lambda_in, theta,  Z_Te_table, T_e, T_i, n_e, A
     m_i=m_p*A
     om_pe=5.64e4*n_e**0.5
     #define omega and k as in Sheffield 113
-    ki=2*pi/lambda_in
-    omega_i=((c*ki)**2+om_pe**2)**0.5
-    ks=2*pi/lambda_range
-    omega_s=((c*ks)**2+om_pe**2)**0.5
+    omega_i = 2*pi/lambda_in * c #input free space frequency
+    ki = ((omega_i**2 - om_pe**2)/c**2)**0.5 #input wave-vector in plasma
+
+    omega_s = 2*pi/lambda_range * c #scattering free space frequency
+    ks = ((omega_s**2 - om_pe**2)/c**2)**0.5 #scattering wave-vector in plasma
+
     th=theta/180.0*np.pi
     k=(ks**2+ki**2-2*ks*ki*np.cos(th))**0.5
-    omega=omega_s-omega_i
+    omega=omega_s-omega_i #frequency shift
     #define dimensionless parameters ala Sheffield
     a=sqrt(2*e*T_e/m_e)
     b=sqrt(2*e*T_i/m_i)
