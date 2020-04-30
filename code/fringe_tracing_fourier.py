@@ -4,7 +4,7 @@ from skimage.io import imread, imsave
 from skimage.morphology import thin, skeletonize
 from skimage.draw import circle
 from skimage.filters import gaussian
-from scipy.misc import imsave
+#from scipy.misc import imsave
 
 import matplotlib.pyplot as plt
 import numpy as np

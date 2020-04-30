@@ -59,7 +59,7 @@ class DataMap:
         if verbose is True:
             print(start_px,end_px)
         #use scikit image to do a nice lineout on the cropped array
-        self.lo=profile_line(self.data_c, start_px,end_px,linewidth=lineout_width_mm*self.scale)
+        self.lo=profile_line(self.data_c, start_px,end_px,linewidth=int(lineout_width_mm*self.scale))
         #set up a mm scale centred on 0
         px_range=self.lo.size/2
         self.mm=np.linspace(-px_range, px_range, self.lo.size)/self.scale #flip range to match images
@@ -165,7 +165,7 @@ class DMFromArray(DataMap):
         if flip_lr is True:
             array = np.fliplr(array)
         if rot_angle is not None:
-            array = rotate(array, rot_angle)
+            array = rotate(array, rot_angle, resize=True)
         self.data = array*multiply_by
         self.scale = scale
         self.cmap = 'inferno'
