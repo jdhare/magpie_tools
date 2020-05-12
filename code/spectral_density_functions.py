@@ -85,14 +85,13 @@ def S_k_omega_e(lambda_range, lambda_in, theta,T_e,n_e, v_fe):
     '''
     Returns a normalised spectral density function for the electron component only
     Implements the model of Sheffield (2nd Ed.)
-    One ion, one electron species with independent temeperatures
-    Electron velocity is with respect to ion velocity
+    One electron species
     Returns S(k,w) for each wavelength in lambda_range assuming
     input wavelength lambda_in. Both in metres
     Theta is angle between k_in and k_s in degrees
     A i atomic mass, Z is ion charge
-    T_e, T_i in eV, n_e in cm^-3
-    V_fi and V_fe in m/s
+    T_e in eV, n_e in cm^-3
+    V_fe in m/s
     '''
     #physical parameters
     pi=np.pi
