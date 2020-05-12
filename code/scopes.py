@@ -7,7 +7,7 @@ class Globals:
     '''
     Defines the location of the scope folders. if you need to use a local version instead of LINNE, you can modify the location here.
     '''
-    scope_folder="//LINNA/scopes/scope"
+    scope_folder=r"D:\\MAGPIE Scopes\\"
 
 class ScopeChannel:
     '''
@@ -32,7 +32,8 @@ class ScopeChannel:
         self.shot=shot
         self.scope=scope
         self.channel=channel
-        fn=Globals.scope_folder+scope+"_"+shot
+        fn=Globals.scope_folder+"scope"+scope+"_"+shot
+        self.fn=fn
         self.time=np.loadtxt(fn+"time")
         self.data=np.loadtxt(fn + "_" + channel)[1:]
         
