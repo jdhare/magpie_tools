@@ -487,6 +487,54 @@ def Z_nLTE(Te, Z_Te_table):
     Z=Z_Te_table[index,1]
     return Z
 
+def S_k_omega_nLTE_abs(lambda_range, lambda_in, response, theta,  Z_Te_table, T_e, T_i, n_e, A,V_fi, V_fe):
+    #physical parameters
+    pi=np.pi
+    Z=Z_nLTE(T_e, Z_Te_table)
+    m_i=m_p*A
+    om_pe=5.64e4*n_e**0.5
+    #define omega and k as in Sheffield 113
+    omega_i = 2*pi/lambda_in * c #input free space frequency
+    ki = ((omega_i**2 - om_pe**2)/c**2)**0.5 #input wave-vector in plasma
+
+    omega_s = 2*pi/lambda_range * c #scattering free space frequency
+    ks = ((omega_s**2 - om_pe**2)/c**2)**0.5 #scattering wave-vector in plasma
+
+    th=theta/180.0*np.pi
+    k=(ks**2+ki**2-2*ks*ki*np.cos(th))**0.5
+    omega=omega_s-omega_i #frequency shift
+    #define dimensionless parameters ala Sheffield
+    a=sqrt(2*e*T_e/m_e)
+    b=sqrt(2*e*T_i/m_i)
+    x_e=(omega/k+V_fe+V_fi)/a
+    x_i=(omega/k+V_fi)/b
+    lambda_De=7.43*(T_e/n_e)**0.5 #in m
+    #the all important alpha parameter
+    alpha=1/(k*lambda_De)
+    #set up the Fadeeva function
+    w=scipy.special.wofz
+    #susceptibilities
+    chi_i=alpha**2*Z*T_e/T_i*(1+1j*sqrt(pi)*x_i*w(x_i))
+    chi_e=alpha**2*(1+1j*sqrt(pi)*x_e*w(x_e))
+    epsilon=1+chi_e+chi_i
+    #distribution functions
+    fe0=np.exp(-x_e**2)/a
+    fi0=np.exp(-x_i**2)/b
+    ions=Z*fi0
+    Skw=2*sqrt(pi)/k*(np.abs(1-chi_e/epsilon)**2*fe0+np.abs(chi_e/epsilon)**2*ions)
+
+    skw_conv=convolve(response,skw)
+
+    return Skw #don't normalise the spectrum
+
+def Skw_nLTE_stray_light_convolve_abs(lambda_range, interpolation_scale, lambda_in, response, theta,  Z_Te_table, n_e, T_e, V_fe, A, T_i, V_fi, stray, amplitude, offset, shift, notch):
+    skw=S_k_omega_nLTE(lambda_range, lambda_in, theta,  Z_Te_table, T_e, T_i, n_e, A,V_fi, V_fe)
+    skw_conv=convolve(response,skw)
+    skw_conv_stray=amplitude*skw_conv #add in some of the background to account for unshifted light
+    return skw_conv_stray[::interpolation_scale]*notch
+
+
+
 def S_k_omega_nLTE(lambda_range, lambda_in, theta,  Z_Te_table, T_e, T_i, n_e, A,V_fi, V_fe):
     #physical parameters
     pi=np.pi
@@ -532,3 +580,5 @@ def Skw_nLTE_stray_light_convolve(lambda_range, interpolation_scale, lambda_in, 
     skw_conv=convolve(response,skw)
     skw_conv_stray=amplitude*skw_conv/skw_conv.max()+stray*response/response.max()+offset #add in some of the background to account for unshifted light
     return skw_conv_stray[::interpolation_scale]*notch
+
+

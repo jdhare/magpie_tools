@@ -89,7 +89,7 @@ class Fibre:
             skw_func=Skw_e_stray_light_convolve
 
         if notch is None:
-            self.iv_dict['notch']=np.zeros_like(self.shot)+1.0
+            self.iv_dict['notch']=np.ones_like(self.shot)
         if notch is not None:
             self.iv_dict['notch']=notch
 
@@ -141,15 +141,38 @@ class Fibre:
         th=self.theta*np.pi/180
         k=4*np.pi*np.sin(th/2.0)/self.l0
         self.params['alpha']=np.abs(1/(k*lambda_De))
-    def calculate_predicted_intensity(self):
-        #calculate the expected TS intensity
+    def calculate_intensity_form_factor(self):
+        #calculate the expected TS intensity from the form factor equation
         self.params['Z']=Z_nLTE(self.params['T_e'], self.iv_dict['Z_Te_table'])
         Z=self.params['Z']
         alpha=self.params['alpha']
         TS_norm=Z*self.params['n_e']*alpha**4/((1+alpha**2)*(1+alpha**2+alpha**2*Z*self.params['T_e']/self.params['T_i']))
-        self.params['predicted intensity']=TS_norm
-    def calculate_integrated_intensity(self):
-        self.params['integrated_intensity']=np.sum(self.shot)/np.sum(self.response)
+        self.params['predicted intensity FF']=TS_norm
+        return TS_norm
+    def calculate_intensity_without_stray(self, return_spectrum = False):
+        #calculate the expected TS intensity from the fitted data, without stray light
+        pars = self.params.copy()
+        pars['interpolation_scale'] = 1 # actually we use the interpolation scale from the fit, this is a dummy
+        pars['lambda_in'] = self.iv_dict['lambda_in'] 
+        pars['lambda_range'] = self.iv_dict['lambda_range']
+        pars['response'] = self.iv_dict['response'] # use interpolated response for convolution
+        pars['offset'] = 0
+        pars['stray'] = 0
+        pars['notch'] = np.ones_like(pars['response'])
+        pars.pop('model')
+        pars.pop('Z')
+        pars.pop('alpha')
+
+        skw = Skw_nLTE_stray_light_convolve(**pars)
+
+        if return_spectrum is True:
+            shift_interp = (pars['lambda_range'] - pars['lambda_in'])*1e10
+            return shift_interp, skw
+        else:
+            dlambda=pars['lambda_range'][1]-pars['lambda_range'][0]
+            self.params['predicted intensity no stray'] = skw.sum()*dlambda
+            return skw.sum()*dlambda
+        
     def export_data(self, filename):
         data=list(zip(self.shift*1e10, self.bkgd,self.response, self.shot, self.skw_res.best_fit))
         headings=('Wavelength shift', 'Background', 'Response', 'Shot', 'Fit')
@@ -292,7 +315,6 @@ class TS_Analysis:
         plot_data=ax.plot(f.lamb,f.shot,label='Data', marker='o',lw=2, c='b')
         #plotting region
         ax.set_ylim(bottom=0.0)
-        #ax.set_xlim([531e-9,533e-9])
         ax.set_xlabel(r'Wavelength (nm)',fontsize=20*text_mul)
         ax.set_ylabel('Intensity (a.u.)',fontsize=20*text_mul)
         ax.tick_params(labelsize=20*text_mul, pad=5, length=10, width=2)
