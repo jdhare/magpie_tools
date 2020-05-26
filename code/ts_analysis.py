@@ -43,8 +43,8 @@ class Fibre:
     def symmetric_crop_around_l0(self):
         #now crop the data so that the response is symmetric for the convolution to work
         l0_i=find_nearest(self.lamb, self.l0)
-        take_l=min(l0_i,self.lamb.size-l0_i) #trim the shortest distance from the central wavelength
-        low_i, high_i=l0_i-take_l, l0_i+take_l
+        take_l=min(l0_i,self.lamb.size-l0_i)-1 #trim the shortest distance from the central wavelength
+        low_i, high_i=l0_i-take_l, l0_i+take_l+1 # odd length array with peak at centre.
         self.lamb=self.lamb[low_i:high_i]
         self.bkgd=self.bkgd[low_i:high_i]
         self.shot=self.shot[low_i:high_i]

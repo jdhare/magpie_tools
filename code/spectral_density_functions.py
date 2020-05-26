@@ -15,7 +15,7 @@ Il=scipy.special.iv #modified bessel function of first kind
 #round to n significant figures, good for stringifying.
 round_to_n = lambda x, n: round(x, -int(np.floor(np.log10(np.abs(x)))) + (n - 1))
 
-def convolve(arr, kernel):
+'''def convolve(arr, kernel):
     # simple convolution of two arrays
     # can't remember where I took this from or how it works, but it does.
     npts = min(len(arr), len(kernel))
@@ -23,7 +23,16 @@ def convolve(arr, kernel):
     tmp = np.concatenate((pad*arr[0], arr, pad*arr[-1]))
     out = np.convolve(tmp, kernel, mode='valid')
     noff = int((len(out) - npts)/2)
-    return out[noff:noff+npts]
+    return out[noff:noff+npts]'''
+
+'''def convolve(arr, kernel):
+    forward = np.convolve(arr, kernel, mode='same')
+    backward = np.convolve(arr[::-1], kernel, mode='same')[::-1]
+    return (forward+backward)/2'''
+
+def convolve(arr,kernel):
+    return np.convolve(arr,kernel, mode='same')
+
 
 def S_k_omega(lambda_range, lambda_in, theta, A, T_e,T_i,n_e,Z, v_fi=0, v_fe=0):
     '''
