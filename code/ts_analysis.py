@@ -324,7 +324,7 @@ class TS_Analysis:
         plt.tight_layout()
         self.fig=fig
         self.ax=ax
-    def pretty_plot(self, Fnum, Fset ,sr=8, tm=1.0):
+    def pretty_plot(self, Fnum, Fset ,sr=8, tm=1.0, style='dots'):
         '''Probably the prettiest plot you've ever seen'''
         f=self.select_fibre(Fnum,Fset)
         try:
@@ -335,12 +335,17 @@ class TS_Analysis:
         text_mul=tm
 
         bk_norm=0.5*f.shot.max()/f.bkgd.max()
-        fig, ax=plt.subplots(figsize=(8,6))
-
-        plot_data=ax.plot(f.shift*1e10,bk_norm*f.bkgd, label='Background', lw=1, marker='o', color='gray')
-        plot_data=ax.plot(f.shift*1e10,bk_norm*response, label='Response', lw=1, ls='--', color='black')
-        plot_data=ax.scatter(f.shift*1e10,f.shot,label='Data', marker='o',lw=1, color='blue', alpha=0.5)
-        plot_fit=ax.plot(f.shift*1e10,f.skw_res.best_fit, label='Best Fit', lw=2, ls='--', color='red')
+        fig, ax=plt.subplots(figsize=(12,6))
+        if style is 'dots':
+            ax.plot(f.shift*1e10,bk_norm*f.bkgd, label='Background', lw=1, marker='o', color='gray')
+            ax.plot(f.shift*1e10,bk_norm*response, label='Response', lw=1, ls='--', color='black')
+            ax.scatter(f.shift*1e10,f.shot,label='Data', marker='o',lw=1, color='blue', alpha=0.5)
+            ax.plot(f.shift*1e10,f.skw_res.best_fit, label='Best Fit', lw=2, ls='--', color='red')
+        if style is 'steps':
+            ax.step(f.shift*1e10,bk_norm*f.bkgd, label='Background', lw=1,  color='gray', where='mid')
+            ax.step(f.shift*1e10,bk_norm*response, label='Response', lw=1, color='black', where='mid')
+            ax.step(f.shift*1e10,f.shot,label='Data', lw=2, color='blue', where='mid')
+            ax.step(f.shift*1e10,f.skw_res.best_fit, label='Best Fit', lw=2, color='red', where='mid')
         #plotting region
         ax.set_ylim(bottom=0.0)
         ax.set_xlim([-sr,sr])
