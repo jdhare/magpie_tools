@@ -324,8 +324,18 @@ class TS_Analysis:
         plt.tight_layout()
         self.fig=fig
         self.ax=ax
-    def pretty_plot(self, Fnum, Fset ,sr=8, tm=1.0, style='dots'):
-        '''Probably the prettiest plot you've ever seen'''
+    def pretty_plot(self, Fnum, Fset ,sr=8.0, tm=1.0, style='dots'):
+        """Prints the output of the fit in a very pretty way. Plot options are available.
+
+        Arguments:
+            Fnum {float} -- Number of the fibre in a set
+            Fset {float} -- Fibre set, A or B
+
+        Keyword Arguments:
+            sr {float} -- Shift Range, the number of Angstroms shift to plot around the centre (default: {8})
+            tm {float} -- Text multiplier, to change the text size(default: {1.0})
+            style {str} -- Style, either 'dots' or 'steps' (default: {'dots'})
+        """
         f=self.select_fibre(Fnum,Fset)
         try:
             shift=f.params['shift']
