@@ -297,6 +297,8 @@ class Shadowgram(DataMap):
         d=plt.imread(filename)
         if colour is 'g': #implement other colours as necessary
             d=d[:,:,1]
+        if colour is 'ir': #implement other colours as necessary
+            d=d.sum(axis=2)
         if flip_lr is True:
             d=np.fliplr(d)
         if rot_angle is not None:
@@ -307,11 +309,66 @@ class Shadowgram(DataMap):
         if ax is None:
             fig, ax=plt.subplots(figsize=(12,8))
         return ax.imshow(self.data)
-    def plot_data_mm(self, ax=None):
+    def plot_data_mm(self, ax=None, cmap=None):
         if ax is None:
             fig, ax=plt.subplots(figsize=(12,8))
         d=self.data_c
-        return ax.imshow(d, interpolation='none', extent=self.extent, aspect=1)
+        return ax.imshow(d, interpolation='none', extent=self.extent, aspect=1, cmap=cmap)
+
+class Burdigram(DataMap):
+    def __init__(self, filename, scale_x, scale_ϕ, flip_lr=False, rot_angle=None, multiply_by=1):
+        self.fn=filename[:8]
+        d=plt.imread(filename)
+        d*=multiply_by
+        if flip_lr is True:
+            d=np.fliplr(d)
+        if rot_angle is not None:
+            d=rotate(d, rot_angle, resize=True)
+        self.data=d
+        self.scale_x=scale_x
+        self.scale_ϕ=scale_ϕ
+    def set_origin(self, origin, extent, verbose=False):
+        self.origin=origin
+        self.extent=extent
+        ϕmin=int(origin[0]-extent[1]*self.scale_ϕ)
+        ϕmax=int(origin[0]-extent[0]*self.scale_ϕ)
+        xmin=int(origin[1]+extent[2]*self.scale_x)
+        xmax=int(origin[1]+extent[3]*self.scale_x)
+        if verbose is True:
+            print(ϕmin,ϕmax, xmin,xmax)
+        self.origin_crop=(extent[1]*self.scale_ϕ,-extent[2]*self.scale_x)
+        self.data_c=self.data[ϕmin:ϕmax, xmin:xmax]
+        self.extent=extent[2:4]+extent[0:2]
+    def plot_data_px(self, ax=None):
+        if ax is None:
+            fig, ax=plt.subplots(figsize=(12,8))
+        return ax.imshow(self.data)
+    def plot_data_mm(self, ax=None, cmap=None):
+        if ax is None:
+            fig, ax=plt.subplots(figsize=(12,8))
+        d=self.data_c
+        return ax.imshow(d, interpolation='none', extent=self.extent, cmap=cmap)
+    def mm_to_px(self,mm):
+        px_origin=self.origin_crop
+        return (int(-mm[0]*self.scale_ϕ+px_origin[0]),int(mm[1]*self.scale_x+px_origin[1]))
+    def create_lineout_angle(self, start=(-1,5), end=(1,5), lineout_width_mm=1, verbose=False):
+        '''
+        start and end are in degrees
+        '''
+        if start[1] is not end[1]:
+            print('Ensure start and end are the same mm positions')
+            return
+        #find coordinates in pixels
+        start_px=self.mm_to_px(start)
+        end_px=self.mm_to_px(end)
+        if verbose is True:
+            print(start_px,end_px)
+        #use scikit image to do a nice lineout on the cropped array
+        self.lo=profile_line(self.data_c, start_px,end_px,linewidth=int(lineout_width_mm*self.scale_x))
+        #set up an angle scale centred on 0
+        self.angles=np.linspace(start[0], end[0], self.lo.size)
+    def create_lineout(self):
+        print('Not Implemented in this class, consider create_lineout_angle')
 
 class PolarimetryMap(DataMap):
     def __init__(self, R0fn, R1fn, B0fn, B1fn, S0fn, S1fn, rot_angle=None):
