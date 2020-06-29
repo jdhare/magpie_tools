@@ -343,11 +343,11 @@ class Burdigram(DataMap):
         if ax is None:
             fig, ax=plt.subplots(figsize=(12,8))
         return ax.imshow(self.data)
-    def plot_data_mm(self, ax=None, cmap=None):
+    def plot_data_mm(self, ax=None, cmap=None, aspect=1):
         if ax is None:
             fig, ax=plt.subplots(figsize=(12,8))
         d=self.data_c
-        return ax.imshow(d, interpolation='none', extent=self.extent, cmap=cmap)
+        return ax.imshow(d, interpolation='none', extent=self.extent, cmap=cmap, aspect=aspect)
     def mm_to_px(self,mm):
         px_origin=self.origin_crop
         return (int(-mm[0]*self.scale_ϕ+px_origin[0]),int(mm[1]*self.scale_x+px_origin[1]))
