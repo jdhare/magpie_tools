@@ -34,19 +34,24 @@ class DataMap:
             fig, ax=plt.subplots(figsize=(12,8))
         d=self.data*multiply_by
         return ax.imshow(d, clim=clim, cmap=self.cmap)
-    def set_origin(self, origin, extent):
+    def set_origin(self, origin, extent, verbose = False):
         self.origin=origin
         self.extent=extent
         ymin=int(origin[0]-extent[1]*self.scale)
         ymax=int(origin[0]-extent[0]*self.scale)
         xmin=int(origin[1]+extent[2]*self.scale)
         xmax=int(origin[1]+extent[3]*self.scale)
+        if verbose is True:
+            print("ymin, ymax, xmin, xmax: ")
+            print(ymin, ymax, xmin, xmax)
+            print("Limits in y and x:")
+            print(self.data.shape)
         self.origin_crop=(extent[1]*self.scale,-extent[2]*self.scale)
         self.data_c=self.data[ymin:ymax, xmin:xmax]
         self.extent=extent[2:4]+extent[0:2]
     def plot_data_mm(self, clim=None, multiply_by=1, ax=None):
         if ax is None:
-            fig, ax=plt.subplots(figsize=(12,8))
+            fig, ax=plt.subplots(figsize=(8,8))
         d=self.data_c*multiply_by
         return ax.imshow(d, cmap=self.cmap, interpolation='none', clim=clim, extent=self.extent, aspect=1)
     def create_lineout(self, start=(0,0), end=(0,0), lineout_width_mm=1, verbose=False):
