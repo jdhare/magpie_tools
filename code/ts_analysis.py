@@ -245,17 +245,23 @@ class TS_Analysis:
         self.plot_dots=self.ax_edge.plot(fe, pe[fe], 'r.')
     def find_fibre_edges(self):
         interact(self.plot_fibre_edges, spacing=(10,60,0.1),offset=(0,512,1))
-    def split_into_fibres(self, discard_rows=6, dark_x=300, intensity_x=60):
+    def split_into_fibres(self, discard_rows=6, dark_counts = None, dark_x=300, intensity_x=60, fibres = 28):
         '''Splits the images into 1D arrays for each fibre'''
         fe=np.array(self.fibre_edges)
+        fe=fe[:fibres+1] # remove non-fibres
         self.N_fibres=fe.size
         ##zero dark counts
-        dark_counts=(self.shot[:, :dark_x].mean()+self.shot[:, -dark_x:].mean())/2
-        self.dark_counts_shot=dark_counts
-        s=self.shot-dark_counts
-        dark_counts=(self.background[:, :dark_x].mean()+self.background[:, -dark_x:].mean())/2
-        self.dark_counts_bkgd=dark_counts
-        b=self.background-dark_counts
+        if dark_counts is None:
+            dark_counts=(self.shot[:, :dark_x].mean()+self.shot[:, -dark_x:].mean())/2
+            self.dark_counts_shot=dark_counts
+            s=self.shot-dark_counts
+            dark_counts=(self.background[:, :dark_x].mean()+self.background[:, -dark_x:].mean())/2
+            self.dark_counts_bkgd=dark_counts
+            b=self.background-dark_counts
+        else:
+            s=self.shot-dark_counts
+            b=self.background-dark_counts
+
         ##Shot Fibres
         shot_fibres=np.zeros((fe.size-1, self.shot.shape[1]))
         shot_abs_err=np.zeros_like(shot_fibres)
