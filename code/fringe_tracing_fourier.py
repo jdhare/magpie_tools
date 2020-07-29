@@ -44,7 +44,7 @@ def plot_filter(fft, R0, theta, radius_of_filter, blur):
     masked_fft=fft_filter*fft
    
     fig, ax=plt.subplots(figsize=(8,8))
-    ax.imshow(np.abs(masked_fft[y_l:y_u,x_l:x_u]))
+    ax.imshow(np.abs(masked_fft[y_l:y_u,x_l:x_u]), clim=[0, 100000])
 
 
 
