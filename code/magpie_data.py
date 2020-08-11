@@ -300,9 +300,9 @@ class Shadowgram(DataMap):
     def __init__(self, filename, scale, flip_lr=False, rot_angle=None, colour='g'):
         self.fn=filename[:8]
         d=plt.imread(filename)
-        if colour is 'g': #implement other colours as necessary
+        if colour == 'g': #implement other colours as necessary
             d=d[:,:,1]
-        if colour is 'ir': #implement other colours as necessary
+        if colour == 'ir': #implement other colours as necessary
             d=d.sum(axis=2)
         if flip_lr is True:
             d=np.fliplr(d)
@@ -597,7 +597,7 @@ class OpticalFrames:
             frames_to_plot=range(0,len(self.s))
         if filename is None:
             filename=self.shot
-        if len(clims) is 1:
+        if len(clims) == 1:
             clims=clims*12
 
         h=w/frame.shape[1]*frame.shape[0]
