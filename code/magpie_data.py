@@ -38,9 +38,11 @@ class DataMap:
         self.origin=origin
         self.extent=extent
         ymin=int(origin[0]-extent[1]*self.scale)
-        ymax=int(origin[0]-extent[0]*self.scale)
+        # Add 1 to ymax, xmax so we include the endpoint (unlike numpy)
+        # (Necessary for create_lineout, where skimage expects the endpoint)
+        ymax=int(origin[0]-extent[0]*self.scale)+1  # Include endpoint
         xmin=int(origin[1]+extent[2]*self.scale)
-        xmax=int(origin[1]+extent[3]*self.scale)
+        xmax=int(origin[1]+extent[3]*self.scale)+1  # Include endpoint
         if verbose is True:
             print("ymin, ymax, xmin, xmax: ")
             print(ymin, ymax, xmin, xmax)
