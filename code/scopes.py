@@ -21,7 +21,7 @@ class ScopeChannel:
         data: voltage as a numpy array
     
     '''
-    def __init__(self, shot, scope, channel):
+    def __init__(self, shot, scope, channel, folder = None):
         '''
         Args:
             shot: a string containing the shot number, in standard 'sMMDD_YY' format
@@ -32,7 +32,10 @@ class ScopeChannel:
         self.shot=shot
         self.scope=scope
         self.channel=channel
-        fn=Globals.scope_folder+"scope"+scope+"_"+shot
+
+        if folder is None:
+            folder = Globals.scope_folder
+        fn=folder +"scope"+scope+"_"+shot
         self.fn=fn
         self.time=np.loadtxt(fn+"time")
         self.data=np.loadtxt(fn + "_" + channel)[1:]

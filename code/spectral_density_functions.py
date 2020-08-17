@@ -131,6 +131,8 @@ def S_k_omega_e(lambda_range, lambda_in, theta,T_e,n_e, v_fe):
     fe0=np.exp(-x_e**2)/a
     Skw=2*sqrt(pi)/k*(np.abs(1-chi_e/epsilon)**2*fe0)
 
+    # Skw *= lambda_range**-2 # correct for distortion due to the jacobian. Small effect so leave it out
+
     return Skw/Skw.max() #normalise the spectrum
 
 
