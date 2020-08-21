@@ -106,11 +106,12 @@ def S_k_omega_e(lambda_range, lambda_in, theta,T_e,n_e, v_fe):
     pi=np.pi
     om_pe=5.64e4*n_e**0.5#electron plasma frequency
     #define omega and k as in Sheffield 113
-    ki=2*pi/lambda_in
-    omega_i=((c*ki)**2+om_pe**2)**0.5
 
-    ks=2*pi/lambda_range
-    omega_s=((c*ks)**2+om_pe**2)**0.5
+    omega_i = 2*pi/lambda_in * c #input free space frequency
+    ki = ((omega_i**2 - om_pe**2)/c**2)**0.5 #input wave-vector in plasma
+
+    omega_s = 2*pi/lambda_range * c #scattering free space frequency
+    ks = ((omega_s**2 - om_pe**2)/c**2)**0.5 #scattering wave-vector in plasma
 
     th=theta/180.0*np.pi#convert to radians for cosine function
     k=(ks**2+ki**2-2*ks*ki*np.cos(th))**0.5
@@ -131,7 +132,7 @@ def S_k_omega_e(lambda_range, lambda_in, theta,T_e,n_e, v_fe):
     fe0=np.exp(-x_e**2)/a
     Skw=2*sqrt(pi)/k*(np.abs(1-chi_e/epsilon)**2*fe0)
 
-    # Skw *= lambda_range**-2 # correct for distortion due to the jacobian. Small effect so leave it out
+    Skw *= lambda_range**-2 # correct for distortion due to the jacobian. Small effect so leave it out
 
     return Skw/Skw.max() #normalise the spectrum
 
