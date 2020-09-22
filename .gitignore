@@ -16,3 +16,4 @@ code/__pycache__/scopes.cpython-35.pyc
 .idea/vcs.xml
 .idea/workspace.xml
 templates/example_data/s1006_15 532nm neL.txt
+*.dat

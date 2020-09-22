@@ -463,7 +463,7 @@ def generate_ZTe_table(A):
     if A is 27:
         return np.genfromtxt('zb_Al.dat', delimiter=' ', skip_header=2)
     if A is 64:
-        return np.genfromtxt('zb_Al.dat', delimiter=' ', skip_header=2)
+        return np.genfromtxt('zb_Cu.dat', delimiter='     ', skip_header=2, usecols = [0,2])
     if A is 183:
         return np.genfromtxt('zb_W.dat', delimiter=' ')
     else:
