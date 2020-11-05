@@ -257,7 +257,7 @@ def nu_0(a,b, T_e=None):
     return 4*np.pi*a.e**2*b.e**2*col_log(a,b, T_e)*b.n/(a.m_g**2*np.abs(a.v)**3)
 
 def psi(x, steps=1e6):
-    t=np.linspace(0, x, steps)
+    t=np.linspace(0, x, int(steps))
     integrand=t**0.5*np.exp(-t)
     return 2/np.sqrt(np.pi)*np.trapz(integrand, x=t)
 

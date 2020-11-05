@@ -47,20 +47,22 @@ def S_k_omega(lambda_range, lambda_in, theta, A, T_e,T_i,n_e,Z, v_fi=0, v_fe=0):
     T_e, T_i in eV, n_e in cm^-3
     V_fi and V_fe in m/s
     '''
+
     #physical parameters
     pi=np.pi
+    Z=Z_nLTE(T_e, Z_Te_table)
     m_i=m_p*A
-    om_pe=5.64e4*n_e**0.5#electron plasma frequency
+    om_pe=5.64e4*n_e**0.5
     #define omega and k as in Sheffield 113
-    ki=2*pi/lambda_in
-    omega_i=((c*ki)**2+om_pe**2)**0.5
+    omega_i = 2*pi/lambda_in * c #input free space frequency
+    ki = ((omega_i**2 - om_pe**2)/c**2)**0.5 #input wave-vector in plasma
 
-    ks=2*pi/lambda_range
-    omega_s=((c*ks)**2+om_pe**2)**0.5
+    omega_s = 2*pi/lambda_range * c #scattering free space frequency
+    ks = ((omega_s**2 - om_pe**2)/c**2)**0.5 #scattering wave-vector in plasma
 
-    th=theta/180.0*np.pi#convert to radians for cosine function
+    th=theta/180.0*np.pi
     k=(ks**2+ki**2-2*ks*ki*np.cos(th))**0.5
-    omega=omega_s-omega_i
+    omega=omega_s-omega_i #frequency shift
 
     #define dimensionless parameters ala Sheffield
     a=sqrt(2*e*T_e/m_e)

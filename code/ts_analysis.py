@@ -448,6 +448,125 @@ class TS_Analysis:
         plt.tight_layout()
         self.fig=fig
         self.ax=ax
+
+    def pretty_plot14(self, Fset,sr=8.0, tm=0.8, style='steps'):
+        """Prints the output of the fit in a legible way for comparing many fibres. Plot options are available.
+
+        Arguments:
+            Fset {float} -- Fibre set, A, B, Both1 (both sets side by side 1 to 7) or Both2 (both sets side by side 8 to 14)
+
+        Keyword Arguments:
+            sr {float} -- Shift Range, the number of Angstroms shift to plot around the centre (default: {8})
+            tm {float} -- Text multiplier, to change the text size(default: {1.0})
+            style {str} -- Style, either 'dots' or 'steps' (default: {'dots'})
+        """
+        
+        fig, axs = plt.subplots(7, 2,figsize=(13,20))
+        for i in range(0,14):
+            if Fset == 'A' or Fset == 'B':
+                if i < 7:
+                    j=i
+                    k=0
+                    n=i+1
+                    F_set=Fset
+                else:
+                    j=i-7
+                    k=1
+                    n=i+1
+                    F_set=Fset
+            elif Fset == 'Both1':
+                if i < 7:
+                    j=i
+                    k=0
+                    n=i+1
+                    F_set='A'
+                else:
+                    j=i-7
+                    k=1
+                    n=i-6
+                    F_set='B'
+            elif Fset == 'Both2':
+                if i < 7:
+                    j=i
+                    k=0
+                    n=i+8
+                    F_set='A'
+                else:
+                    j=i-7
+                    k=1
+                    n=i+1
+                    F_set='B'
+
+            ax=axs[j,k]
+            f=self.select_fibre(n,F_set)
+
+            try:
+                shift=f.params['shift']
+            except KeyError:
+                shift=0
+            response=np.interp(f.lamb+shift, f.lamb, f.response)
+            text_mul=tm
+
+            bk_norm=0.5*f.shot.max()/f.bkgd.max()
+            #fig, ax=plt.subplots(figsize=(12,6))
+            if style is 'dots':
+                ax.plot(f.shift*1e10,bk_norm*f.bkgd, label='Background', lw=1, marker='o', color='gray')
+                ax.plot(f.shift*1e10,bk_norm*response, label='Response', lw=1, ls='--', color='black')
+                ax.scatter(f.shift*1e10,f.shot,label='Data', marker='o',lw=1, color='blue', alpha=0.5)
+                ax.plot(f.shift*1e10,f.skw_res.best_fit, label='Best Fit', lw=2, ls='--', color='red')
+            if style is 'steps':
+                ax.step(f.shift*1e10,bk_norm*f.bkgd, label='Background', lw=1,  color='gray', where='mid')
+                ax.step(f.shift*1e10,bk_norm*response, label='Response', lw=1, color='black', where='mid')
+                ax.step(f.shift*1e10, f.shot, c='orange', where='mid', label='Data', lw=3)
+                ax.fill_between(f.shift*1e10, y1=f.shot-f.shot_err, y2=f.shot+f.shot_err, step='mid', color='orange', alpha=0.5)
+                ax.step(f.shift*1e10,f.skw_res.best_fit, label='Best Fit', lw=3, color='red', where='mid')
+            #plotting region
+            ax.set_ylim(bottom=0.0)
+            ax.set_xlim([-sr,sr])
+            ax.set_xticks(np.arange(-sr,sr+1,2))
+            if j == 6:
+                ax.set_xlabel(r'Wavelength shift, $(\AA)$',fontsize=10*text_mul)
+            ax.set_ylabel('Intensity (a.u.)',fontsize=10*text_mul)
+            ax.tick_params(labelsize=10*text_mul, pad=5, length=10, width=2)
+            kms=r' $km\,s^{-1}$'
+            if f.params['model'] is 'electron':
+                string_list=[
+                        r'$n_e= $'+str_to_n(f.params['n_e']/1e17,2)+r'$\times$10$^{17} cm^{-3}$',
+                        r'$T_e= $'+str_to_n(f.params['T_e'],2)+' $eV$',
+                        r'$V_{fe}= $'+str_to_n(f.params['V_fe']/1e3,2)+kms,
+                        r'$\alpha\,= $'+str_to_n(f.params['alpha'],2),
+                        ]
+
+            if f.params['model'] is 'nLTE':
+                string_list=[
+                        r'$A\,= $'+str(f.params['A']),
+                        r'$Z\,= $'+str_to_n(f.params['Z'],2),
+                        r'$n_e= $'+str_to_n(f.params['n_e']/1e17,2)+r'$\times$10$^{17} cm^{-3}$',
+                        r'$T_e= $'+str_to_n(f.params['T_e'],2)+' $eV$',
+                        r'$T_i= $'+str_to_n(f.params['T_i'],2)+' $eV$',
+                        r'$V_{fi}= $'+str_to_n(f.params['V_fi']/1e3,2)+kms,
+                        r'$V_{fe}= $'+str_to_n(f.params['V_fe']/1e3,2)+kms,
+                        r'$\alpha\,= $'+str_to_n(f.params['alpha'],2),
+                        ]
+
+            text_str=''
+            for st in string_list:
+                text_str=text_str+st+'\n'
+            text_str=text_str[:-1]
+
+            # these are matplotlib.patch.Patch properties
+            props = dict(boxstyle='round', facecolor='gray', alpha=0.2)
+
+            # place a text box in upper left in axes coords
+            ax.text(0.02, 0.96, text_str, transform=ax.transAxes, fontsize=10*text_mul,
+                verticalalignment='top', bbox=props)
+
+            title_str=self.s_name+': Fit of Thomson Scattering for fibre '+str(n)+F_set+r', $\theta=$'+str(f.theta)+r'$^{\circ}$'
+            ax.set_title(title_str,fontsize=10*text_mul)
+            ax.legend(fontsize=10*text_mul)
+            plt.tight_layout()
+            self.fig=fig
+            self.ax=ax
     def export_data(self, Fnum, Fset):
         f=self.select_fibre(Fnum,Fset)
         filename=self.s_name+' fit dat files/'+self.s_name+'_'+str(Fnum)+Fset+'_data_and_fit'
