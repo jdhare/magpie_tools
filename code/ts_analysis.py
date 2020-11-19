@@ -184,15 +184,16 @@ class Fibre:
             return skw.sum()*dlambda
         
     def export_data(self, filename):
-        data=list(zip(self.shift*1e10, self.bkgd,self.response, self.shot, self.skw_res.best_fit))
-        headings=('Wavelength shift', 'Background', 'Response', 'Shot', 'Fit')
-        units=('Angstroms', 'a.u.', 'a.u.', 'a.u.', 'a.u.')
+        data=list(zip(self.shift*1e10, self.bkgd, self.response, self.shot, self.shot_err, self.skw_res.best_fit))
+        headings=('Wavelength shift', 'Background', 'Response', 'Shot', 'Shot error', 'Fit')
+        units=('Angstroms', 'a.u.', 'a.u.', 'a.u.', 'a.u.', 'a.u.')
         with open(filename+'.dat', 'w',newline='') as f:
             writer = csv.writer(f)
             writer.writerow(headings)
             writer.writerow(units)
             for f in data:
                 writer.writerow(f)
+
 
 class TS_Analysis:
     def __init__(self, folder, shot, backgrounds, calibration=False, skip_footer=0):
