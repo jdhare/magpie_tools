@@ -28,8 +28,6 @@ In order to run these jupyter notebooks, use shift+right click>"open command win
 * **thomson**: fitting for Thomson scattering spectra in .asc format, exported from the Andor spectrometer. Uses an nLTE model to decompose Z and T_e, and offers full flexibility over specifying independent and dependent variables in fits.
 * **background_reconstruction**: reconstructs a full background phase map by fitting a Gaussian optics model to empty regions of the interpolated shot phase map. Useful when the background fringes are rotated compared to the empty regions in the shot, which produces a gradient across the fringe shift map.
 
-### Coming soon(-ish)!
-* **xuv**: for aligning images from the 4-frame cameras.
 
 ### What you need:
 Anaconda is probably the best distribution to use: https://www.anaconda.com/download/ - get the 64 bit version with the latest python kernel (3.6 as of writing). You may find that some packages you need are missing, but these can be installed using `conda install X` at the command line - ask for help if you need it. You will need at least:
