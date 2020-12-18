@@ -552,7 +552,8 @@ def Skw_nLTE_stray_light_convolve_abs(lambda_range, interpolation_scale, lambda_
 def S_k_omega_nLTE(lambda_range, lambda_in, theta,  Z_Te_table, T_e, T_i, n_e, A,V_fi, V_fe):
     #physical parameters
     pi=np.pi
-    Z=Z_nLTE(T_e, Z_Te_table)
+    #Z=Z_nLTE(T_e, Z_Te_table)
+    Z = Z_Te_table(T_e)
     m_i=m_p*A
     om_pe=5.64e4*n_e**0.5
     #define omega and k as in Sheffield 113

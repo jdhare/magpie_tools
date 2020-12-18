@@ -6,6 +6,8 @@ from lmfit import Model
 from lmfit.models import VoigtModel
 import os
 import numpy as np
+from scipy.interpolate import CubicSpline
+
 
 class Fibre:
     def __init__(self, wavelength, background, shot, bkgd_err, shot_err, theta):
@@ -144,7 +146,9 @@ class Fibre:
         self.params=params
         self.params['model']=self.pp_valid['model']
         if self.params['model'] is 'nLTE':
-            self.params['Z']=Z_nLTE(self.params['T_e'], self.iv_dict['Z_Te_table'])
+            #self.params['Z']=Z_nLTE(self.params['T_e'], self.iv_dict['Z_Te_table'])
+            self.params['Z']=float(self.iv_dict['Z_Te_table'](self.params['T_e']))
+
 
     def calculate_alpha(self):
         lambda_De=7.43*(self.params['T_e']/self.params['n_e'])**0.5 #in m
@@ -579,13 +583,21 @@ def find_nearest(array,value):
 
 def generate_ZTe_table(A):
     if A is 12:
-        return np.genfromtxt('zb_C.dat', delimiter='       ', skip_header=4)
+        T_e, Z =  np.genfromtxt('zb_C.dat', delimiter='       ', skip_header=4, usecols = [0,1], unpack = True)
+        Z_mod = CubicSpline(T_e, Z)
+        return Z_mod
     if A is 27:
-        return np.genfromtxt('zb_Al.dat', delimiter=' ', skip_header=2)
+        T_e, Z =  np.genfromtxt('zb_Al.dat', delimiter=' ', skip_header=2, usecols = [0,1], unpack = True)
+        Z_mod = CubicSpline(T_e, Z)
+        return Z_mod
     if A is 64:
-        return np.genfromtxt('zb_Cu.dat', delimiter='     ', skip_header=2, usecols = [0,2])
+        T_e, Z = np.genfromtxt('zb_Cu.dat', delimiter='     ', skip_header=2, usecols = [0,2], unpack = True)
+        Z_mod = CubicSpline(T_e, Z)
+        return Z_mod
     if A is 183:
-        return np.genfromtxt('zb_W.dat', delimiter=' ')
+        T_e, Z = np.genfromtxt('zb_W.dat', delimiter=' ', usecols = [0,1],unpack = True)
+        Z_mod = CubicSpline(T_e, Z)
+        return Z_mod
     else:
         print("No data available for A:", A)
 
