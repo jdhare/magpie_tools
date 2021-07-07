@@ -50,7 +50,6 @@ def S_k_omega(lambda_range, lambda_in, theta, A, T_e,T_i,n_e,Z, v_fi=0, v_fe=0):
 
     #physical parameters
     pi=np.pi
-    Z=Z_nLTE(T_e, Z_Te_table)
     m_i=m_p*A
     om_pe=5.64e4*n_e**0.5
     #define omega and k as in Sheffield 113

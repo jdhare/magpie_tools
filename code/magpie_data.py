@@ -2,6 +2,7 @@ import numpy as np
 import scipy as sp
 import matplotlib.pyplot as plt
 
+
 #from scipy.ndimage.interpolation import rotate
 from skimage.transform import rotate
 from scipy.ndimage import zoom
@@ -299,13 +300,11 @@ class Interferogram(DataMap):
         return ax.imshow(d, interpolation='none', extent=self.extent, aspect=1)
 
 class Shadowgram(DataMap):
-    def __init__(self, filename, scale, flip_lr=False, rot_angle=None, colour='g'):
+    def __init__(self, filename, scale, flip_lr=False, rot_angle=None, channel = 1, wl = None):
         self.fn=filename[:8]
+        self.wl = wl
         d=plt.imread(filename)
-        if colour == 'g': #implement other colours as necessary
-            d=d[:,:,1]
-        if colour == 'ir': #implement other colours as necessary
-            d=d.sum(axis=2)
+        d = d[:,:,channel] # use R, G or B.
         if flip_lr is True:
             d=np.fliplr(d)
         if rot_angle is not None:
@@ -316,11 +315,11 @@ class Shadowgram(DataMap):
         if ax is None:
             fig, ax=plt.subplots(figsize=(12,8))
         return ax.imshow(self.data)
-    def plot_data_mm(self, ax=None, cmap=None):
+    def plot_data_mm(self, ax=None, cmap=None, **kwargs):
         if ax is None:
             fig, ax=plt.subplots(figsize=(12,8))
         d=self.data_c
-        return ax.imshow(d, interpolation='none', extent=self.extent, aspect=1, cmap=cmap)
+        return ax.imshow(d, interpolation='none', extent=self.extent, aspect=1, cmap=cmap, **kwargs)
 
 class Burdigram(DataMap):
     def __init__(self, filename, scale_x, scale_ϕ, flip_lr=False, rot_angle=None, multiply_by=1):
