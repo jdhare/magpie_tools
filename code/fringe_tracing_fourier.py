@@ -2,7 +2,7 @@ import os
 from skimage.color import rgb2gray
 from skimage.io import imread, imsave
 from skimage.morphology import thin, skeletonize
-from skimage.draw import circle
+from skimage.draw import ellipse
 from skimage.filters import gaussian
 #from scipy.misc import imsave
 
@@ -24,9 +24,9 @@ def create_filter(fft, R0, theta, radius_of_filter, blur):
     fft_filter=np.zeros_like(np.abs(fft))
 
     # two circle filter
-    rr, cc = circle(r=y1, c=x1, radius=radius_of_filter, shape=fft_filter.shape)
+    rr, cc = ellipse(r=y1, c=x1, r_radius=radius_of_filter, c_radius=radius_of_filter, shape=fft_filter.shape)
     fft_filter[rr, cc] = 1
-    rr, cc = circle(r=y2, c=x2, radius=radius_of_filter, shape=fft_filter.shape)
+    rr, cc = circle(r=y2, c=x2, r_radius=radius_of_filter, c_radius=radius_of_filter, shape=fft_filter.shape)
     fft_filter[rr, cc] = 1
     
     fft_filter=gaussian(fft_filter, blur)
