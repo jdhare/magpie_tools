@@ -26,7 +26,7 @@ def create_filter(fft, R0, theta, radius_of_filter, blur):
     # two circle filter
     rr, cc = ellipse(r=y1, c=x1, r_radius=radius_of_filter, c_radius=radius_of_filter, shape=fft_filter.shape)
     fft_filter[rr, cc] = 1
-    rr, cc = circle(r=y2, c=x2, r_radius=radius_of_filter, c_radius=radius_of_filter, shape=fft_filter.shape)
+    rr, cc = ellipse(r=y2, c=x2, r_radius=radius_of_filter, c_radius=radius_of_filter, shape=fft_filter.shape)
     fft_filter[rr, cc] = 1
     
     fft_filter=gaussian(fft_filter, blur)
