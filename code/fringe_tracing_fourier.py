@@ -30,6 +30,9 @@ def create_filter(fft, R0, theta, radius_of_filter, blur):
     fft_filter[rr, cc] = 1
     
     fft_filter=gaussian(fft_filter, blur)
+    
+    # Allow DC average value through the filter
+    fft_filter[fft_filter.shape[0]//2, fft_filter.shape[1]//2] = 1
 
     return (x1,x2,y1,y2), fft_filter
 
