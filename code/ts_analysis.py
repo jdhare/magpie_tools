@@ -18,7 +18,7 @@ class Fibre:
         self.bkgd_err=bkgd_err
         self.theta=theta
         self.params={}
-    def voigt_response(self, sigma=None, gamma=None, weights=True):
+    def voigt_response(self, center = 532e-9, sigma=None, gamma=None, weights=True):
         '''
         Fit the background with a Voigt profile to determine the response
         of the spectrometer
@@ -30,7 +30,7 @@ class Fibre:
         '''
         vm=VoigtModel()
         par_v=vm.guess(self.bkgd, x=self.lamb)
-        par_v['center'].set(value=532e-9, vary=True)
+        par_v['center'].set(value=center, vary=True)
         if sigma is not None: #if a width is provided, fix it.
             par_v['sigma'].set(value=sigma, vary=False)
         if gamma is not None: #if a width is provided, fix it.
